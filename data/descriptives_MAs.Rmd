@@ -1,0 +1,86 @@
+---
+title: "Selecting Case Study Articles"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading Packages
+```{r}
+library(tidyverse)
+```
+
+## Loading Data
+
+This data set includes variables for the focus outcome of a study, along with URE related variables. 
+```{r}
+data <- read.csv("data/subset_text.csv")
+```
+
+## Looking at data
+```{r}
+# Distribution of publication year
+table(data$pub_year.x)
+
+# Distribution of journal type
+table(data$journal_cat.x)
+
+# Distribution of stakeholder engagement
+table(data$stake_engagement)
+
+# Distribution of translated effect sizes
+table(data$es_metrics)
+
+# Distribution of inclusion of visualization
+table(data$visualization)
+```
+
+## URE language types
+```{r}
+# Distribution of inclusion of scope text
+table(data$text_type_scope)
+
+# Distribution of inclusion of causes text
+table(data$text_type_causes)
+
+# Distribution of inclusion of feasibility text
+table(data$text_type_feasibility)
+
+# Distribution of inclusion of tactical text
+table(data$text_type_tactical)
+
+# Distribution of inclusion of mandated text
+table(data$text_type_mandated)
+```
+## Target Audience
+```{r}
+# Target audience teachers
+table(data$target_teacher)
+
+# Target audience admin
+table(data$target_admin)
+
+# Target audience coaches
+table(data$target_coach)
+
+# Target audience policymakers
+table(data$target_policy)
+
+# Target audience other
+table(data$target_other)
+
+# Target audience unspecified
+table(data$target_unspec)
+```
+
+## Text format
+```{r}
+# Implementation text
+table(data$section)
+
+# Text in list
+table(data$list)
+```
+
