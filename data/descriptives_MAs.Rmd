@@ -16,7 +16,7 @@ library(tidyverse)
 
 This data set includes variables for the focus outcome of a study, along with URE related variables. 
 ```{r}
-data <- read.csv("data/subset_text.csv")
+data <- read.csv("MA_data.csv")
 ```
 
 ## Looking at data
