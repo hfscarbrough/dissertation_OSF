@@ -21,6 +21,9 @@ data <- read.csv("MA_data.csv")
 
 ## Looking at data
 ```{r}
+# Outcome; yes = math, no = reading
+table(data$out_mathematics)
+
 # Distribution of publication year
 table(data$pub_year.x)
 
