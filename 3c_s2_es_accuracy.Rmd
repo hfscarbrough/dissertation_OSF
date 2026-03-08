@@ -1,0 +1,122 @@
+---
+title: "S2 - ES Accuracy"
+author: "Hannah Scarbrough"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading Packages
+```{r load-packages, message=FALSE}
+library(tidyverse)
+library(RColorBrewer)
+library(scales)
+```
+
+## Global Themes 
+```{r global-theme, message=FALSE}
+viz_theme <- theme_classic() + 
+  theme(legend.text = element_text(size = 12, color = "black", family = "serif"),
+        legend.title = element_text(size = 12, color = "black", family = "serif"),
+        axis.text = element_text(color = "black", size = 12, family = "serif"),
+        axis.title = element_text(size = 12, color = "black", family = "serif"))
+
+```
+
+## Importing Data
+```{r data, message=FALSE}
+# Subset data
+es <- read.csv("data/es_ma.csv")
+```
+
+# Analysis
+
+## View Coded items
+
+```{r es-codes}
+table(es$stat_info)
+
+# look at other code explanations
+es_other <- es %>%
+  filter(stat_info == "Other")
+
+es_other
+# all are not specific to the reference
+
+es_yes <- es %>%
+  filter(stat_info == "Yes") %>%
+  filter(unique_id != "U10645") %>% # mistakenly coded as Yes
+  filter(unique_id != "U10431") %>% # mistakenly coded as Yes
+  select(ma_id, label, unique_id, id, stat_info, stat_explain, es_value, average_es)
+
+table(es_yes$stat_info) # confirm only yes
+```
+
+## Expanding into columns of effect sizes
+
+```{r reported-es-split}
+es_split <- es_yes %>%
+  mutate(nums = str_extract_all(stat_explain, "-?(?:\\d+\\.\\d+|\\.\\d+)")) %>%
+  mutate(nums = lapply(nums, \(x) gsub("^\\.", "0.", x))) %>% # add 0 in front
+  mutate(nums = lapply(nums, \(x) gsub("^\\-\\.", "-0.", x))) %>% # add 0 in front
+  unnest_wider(nums, names_sep = "_") %>%
+  mutate(across(starts_with("nums_"), as.numeric)) %>%
+  mutate(across(starts_with("nums_"), ~ format(round(.x, 2), nsmall = 2)))
+```
+
+## Compare to MA Average
+
+```{r es-compare}
+es_split <- es_split %>%
+  mutate(across(starts_with("nums_"), as.numeric)) %>%   
+  mutate(match_avg = if_any(
+    starts_with("nums_"),
+    ~ replace(.x == average_es, is.na(.x), FALSE)))
+
+table(es_split$match_avg)
+```
+
+## Look at those that don't match
+```{r no-match}
+es_no_match <- es_split %>%
+  filter(match_avg == FALSE) 
+
+view(es_no_match)
+```
+
+All of those (except U10850 and U10849) do not report the average effect, only subgroups. U10234 reports a percentage point increase which isn't in the MA but is in a summary report of the research from the authors. U10850 and U10849 report an effect size but i am not sure what it is. It is a blog though and i wouldn't trust them.  
+
+```{r es-by-ma}
+ggplot(es_split, aes(x = ma_id, fill = match_avg)) +
+  geom_bar() +
+  geom_text(stat = 'count', aes(label = after_stat(count)), 
+            position = position_stack(), 
+            vjust = 2, size = 3, colour = "black")
+```
+
+```{r avg-or-other-es}
+es_type <- es_split %>%
+  mutate(avg_es_yes = case_when(
+    match_avg == TRUE & (is.na(nums_2) | nums_2 == "") ~ "Average ES Only",
+    match_avg == TRUE & (!is.na(nums_2) & nums_2 != "") ~ "Average ES + Other ES",
+    match_avg == FALSE ~ "Other ES")) %>% 
+  mutate(avg_es_yes = ifelse(unique_id %in% c("U10234", "U10849", "U10850"), 
+                             "Unclear", avg_es_yes))
+
+table(es_type$avg_es_yes)
+
+type_es <- ggplot(es_type, aes(avg_es_yes)) +
+  geom_bar(fill = "#9dc892") +
+  geom_text(stat = "count", aes(label = ..count..), vjust = -0.5, 
+            family = "serif", size = 4) +
+  labs(x = "Effect Sizes Reported", y = "Number of Documents") +
+  viz_theme
+
+type_es
+
+# save image
+# ggsave("visuals/es_reported.png", type_es, device = "png", height = 5, width = 7)
+```
+

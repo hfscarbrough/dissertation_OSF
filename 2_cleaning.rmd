@@ -1,0 +1,272 @@
+---
+title: "S2 - Cleaning & Organizing"
+author: "Hannah Scarbrough"
+output: html_document
+---
+
+This document cleans the raw data that are exported from MetaReviewer and organizes it into smaller, more manageable data chunks based on the codebook. This should be run first for any new data export. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading Packages
+```{r load-packages, message=FALSE}
+library(tidyverse) # for data cleaning and visualizations
+```
+
+## Importing Data
+```{r data, message=FALSE}
+# Coded documents
+data_raw <- read.csv("data/raw_data_12_30.csv")
+
+# Meta-analyses
+included_ma <- read.csv("data/ma_data.csv")
+```
+
+## Global Themes 
+```{r theme}
+# to set consistent themes
+viz_theme <- theme_classic()
+```
+
+
+## Labels for MAs
+```{r ma-labels}
+# last name, year
+ma_labels <- included_ma %>%
+  select(ma_id, label)
+```
+
+# Review Meta-Analysis Characteristics & Creating Lists
+
+## Meta-Analyses Outcomes
+```{r MA-outcomes}
+# Math
+ma_math <- included_ma %>%
+  filter(out_mathematics == "Yes") %>%
+  pull(ma_id, label)
+
+ma_math
+
+# Reading
+ma_read <- included_ma %>%
+  filter(out_reading == "Yes") %>%
+  pull(ma_id, label)
+
+ma_read
+```
+
+## Meta-Analyses with Use Strategies
+```{r MA-strategies}
+table(included_ma$visualization)
+table(included_ma$es_metrics)
+table(included_ma$stake_engagement)
+
+# Meta-Analyses with Visualizations
+ma_viz <- included_ma %>%
+  filter(visualization == "Yes") %>%
+  pull(ma_id, label)
+
+ma_viz
+
+# Meta-Analyses with Effect Transformations
+ma_es_trans <- included_ma %>%
+  filter(es_metrics == "Yes") %>%
+  pull(ma_id, label)
+
+ma_es_trans
+
+# Meta-Analyses with Stakeholders
+ma_stake <- included_ma %>%
+  filter(stake_engagement == "Yes") %>%
+  pull(ma_id,label)
+
+ma_stake
+
+# Meta-Analyses with Implications
+ma_imp <- included_ma %>%
+  filter(section == "Yes") %>%
+  pull(ma_id,label)
+
+ma_imp
+```
+
+## Dataset of MAs and Use Strategies as indicators
+```{r use-indicators}
+ma_use_ind <- included_ma %>%
+  select(ma_id, label, out_mathematics, out_reading, visualization, 
+         es_metrics, stake_engagement, section)
+```
+
+
+# Cleaning Data
+
+## ID Checks to remove test rows from data
+```{r cleaning-test-rows, message=FALSE}
+data_working <- data_raw 
+
+table(data_working$ma_id_check) 
+
+data_working[data_working == "M10016\t"] <- "M10016" # one label had extra characters
+
+table(data_working$ma_id_check)
+```
+
+## Cleaning data for analysis 
+```{r clean-data}
+# removing extra MetaReviewer columns
+data_clean <- data_working %>%
+  select(3, 40:114) # keeping ids and coded data
+
+names(data_clean)[names(data_clean) == "ma_id_check"] <- "ma_id"
+data_clean <- merge(data_clean, ma_labels, by = "ma_id", all.x = TRUE)
+
+data_clean <- data_clean %>%
+  relocate(last_col(), .after = ma_id) # moving to second column
+```
+
+## Unique ID Check
+```{r unique_id_check, message=FALSE}
+# checking where Study
+data_clean <- data_clean %>%
+  mutate(u_id_check = ifelse(unique_id_check == study_id, unique_id_check, FALSE))
+
+table(data_clean$u_id_check) 
+
+# only one discrepancy, so I have confirmed the unique_id_check was correct and am moving the column to the front
+data_clean <- data_clean %>% 
+  mutate(unique_id = ifelse(unique_id_check == study_id, unique_id_check, unique_id_check)) %>%
+  relocate(unique_id, .after = label) %>% # moving column to front
+  select(-c(study_id, unique_id_check, u_id_check)) # removing extra unique ID columns
+```
+
+
+## Context Check
+```{r practice-context}
+table(data_clean$context_conf)
+
+data_context_blank <- data_clean %>%
+  mutate(context_check = ifelse(context_conf == "", FALSE, TRUE))
+
+table(data_context_blank$context_check)
+
+data_context_blank <- data_context_blank %>%
+  filter(context_check == FALSE)
+
+# list of blank IDs
+specific_ids <- data_context_blank %>%
+  pull(unique_id)
+
+specific_ids
+
+#U11032 I started to code but the document was no longer available and it could not be coded. It will be removed with the non-practice documents. 
+```
+
+## looking at location of citation 
+```{r location}
+data_missing <- data_clean %>% 
+  filter(present == "None" | present == "Other" | present == "Other,None")
+```
+
+
+## Looking at documents with no context selected and duplicate rows and No longer available
+```{r check-context}
+duplicates <- data_clean %>%
+  group_by(unique_id) %>%
+  filter(n() > 1 | unique_id %in% specific_ids) %>%
+  arrange(unique_id)
+
+# removing documents that aren't available or had incorrect citations.
+
+data_clean <- data_clean %>%
+  filter(unique_id != "U10608" &
+           unique_id != "U10193")
+
+```
+
+## Clean Data set of only practice documents
+```{r practice-only}
+# Filtering out Methodological and Policy Documents 
+practice <- data_clean %>%
+  filter(context_conf == "Practice")
+
+# Adding individual document IDs that don't repeat
+practice <- practice %>%
+  mutate(id = sprintf("D%05d", 10000 + row_number())) %>% # adding id number
+  select(id, everything()) # moving to first column
+```
+
+## Save Practice Data Set as .csv
+```{r save-full-data}
+write_csv(practice, "data/s2_data_clean.csv")
+```
+
+# Example MAs
+
+These are example meta-analyses highlighting
+```{r example-ma-data}
+
+example_ids <- c("M10003", "M10005", "M10016", "M10019")
+
+example <- practice %>%
+  filter(ma_id %in% example_ids) %>% 
+  select(id:unique_id, stat_info:descrip_explain, es_descrip:variability_explain,
+         design:interpretation_explain, name_ma:frame_explain, 
+         population:other, valence:valence_explain)
+
+example_data <- merge(example, ma_use_ind, by = "ma_id")
+
+write_csv(example_data, "data/example_data.csv")
+```
+
+# Subset MA data
+```{r select-ma-data}
+ma_results <- included_ma %>%
+  select(ma_id, label, out_reading, out_mathematics, studies_n, es_n, 
+         hetero_rq, average_es, stake_engagement, table_study, 
+         par_grade:mod_set_na, es_metrics, visualization, explicit_ure, 
+         text_type_instrumental:text_type_mandated, target_teacher:target_other,
+         section) 
+```
+
+# Merge Data
+
+## Data related to Effect Size/Results
+
+```{r es-data}
+# Select doc data related to es
+doc_es <- practice %>%
+  select(ma_id, label, unique_id, id, 
+         stat_info:descrip_explain, es_descrip:variability_explain)
+
+# Select ma data related to es
+ma_es <- ma_results %>%
+  select(ma_id, out_reading, out_mathematics, studies_n, es_n, 
+         hetero_rq, average_es)
+  
+# merge
+es <- merge(doc_es, ma_es, by = "ma_id")
+
+write.csv(es, "data/es_ma.csv")
+```
+
+# Evaluating Discrepencies between s1 and s2
+
+```{r loading-data}
+s1 <- read.csv("data/s1_practice.csv")
+
+s1 <- s1 %>% 
+  rename("unique_id" = "unique_ID") %>% 
+  rename("ma_id" = "ma_ID")
+
+s2 <- read.csv("data/s2_data_clean.csv")
+
+```
+
+
+```{r discrepencies}
+s1_not_in_s2 <- anti_join(s1, s2, by = c("ma_id", "unique_id"))
+
+s1_not_in_s2
+```

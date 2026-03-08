@@ -1,0 +1,780 @@
+---
+title: "S2 - Document Descriptive"
+author: "Hannah Scarbrough"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading Packages
+```{r load-packages, message=FALSE}
+library(tidyverse)
+library(RColorBrewer)
+library(scales)
+```
+
+## Global Themes 
+```{r global_theme, message=FALSE}
+viz_theme <- theme_classic() + 
+             theme(legend.text = element_text(size = 12, color = "black", family = "serif"),
+                   legend.title = element_text(size = 12, color = "black", family = "serif"),
+                   axis.text = element_text(size = 10, color = "black", family = "serif"),
+                   axis.title = element_text(size = 12, color = "black", family = "serif"))
+
+```
+
+## Importing Data
+```{r data, message=FALSE}
+# Subset data
+data <- read.csv("data/s2_data_clean.csv")
+
+# Meta-analyses
+included_ma <- read.csv("data/ma_data.csv")
+```
+
+```{r use-indicators}
+# Reading
+ma_read <- included_ma %>%
+  filter(out_reading == "Yes") %>%
+  pull(ma_id, label)
+
+ma_read
+
+# Math
+ma_math <- included_ma %>%
+  filter(out_mathematics == "Yes") %>%
+  pull(ma_id, label)
+
+ma_math
+
+# Meta-Analyses with Visualizations
+ma_viz <- included_ma %>%
+  filter(visualization == "Yes") %>%
+  pull(ma_id, label)
+
+ma_viz
+
+# Meta-Analyses with Effect Transformations
+ma_es_trans <- included_ma %>%
+  filter(es_metrics == "Yes") %>%
+  pull(ma_id, label)
+
+ma_es_trans
+
+# Meta-Analyses with Stakeholders
+ma_stake <- included_ma %>%
+  filter(stake_engagement == "Yes") %>%
+  pull(ma_id,label)
+
+ma_stake
+
+# Meta-Analyses with Implications
+ma_imp <- included_ma %>%
+  filter(section == "Yes") %>%
+  pull(ma_id,label)
+
+ma_imp
+```
+
+
+# Basic Analysis
+
+## Number of Documents by MA with Topic
+```{r docs-by-ma}
+
+# isolate columns needed
+number_docs <- data %>%
+  select(ma_id, label) %>% 
+  mutate(ma_date = str_extract(label, "\\b\\d{4}\\b")) %>%
+  group_by(label, ma_id, ma_date) %>%
+  summarise(count = n(), .groups = "drop")
+
+# average documents per MA 
+mean(number_docs$count)
+
+# add outcome labels to color code
+number_docs$outcome <- ifelse(number_docs$ma_id %in% ma_read, "Reading",
+                     ifelse(number_docs$ma_id %in% ma_math, "Math", NA))
+
+label_order <- number_docs %>%
+  distinct(label, ma_date) %>%
+  arrange(ma_date) %>%
+  pull(label)
+
+number_docs$label <- factor(number_docs$label, levels = label_order)
+
+# build graph
+docu_ma <- 
+  ggplot(data = number_docs, aes(x = label, y = count, fill = outcome)) +
+  geom_col() + 
+  scale_fill_brewer(palette = "Accent", guide = guide_legend(title = NULL)) +
+  geom_text(aes(label = ifelse(count > 0, count, "")), 
+            position = position_dodge(0.9), vjust = -.3, 
+            family = "serif", size = 4) +
+  viz_theme +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom") +
+  labs(x = "Meta-Analysis", 
+       y = "Number of Citing Documents", 
+       title = "")
+
+# view graph
+docu_ma
+
+# save graph
+# ggsave("visuals/docu_ma.png", docu_ma, device = "png", height = 5, width = 7)
+```
+
+## Audience by MA
+```{r audience-by-ma}
+# isolate columns needed
+aud_docs <- data %>%
+  select(ma_id, unique_id, id, label, audience)
+
+# view list of responses
+# table(aud_docs$audience)
+
+aud <- aud_docs %>%
+  mutate(audience = str_replace_all(audience, 
+                                  "Parents, community members, etc\\.",
+                                  "Parents_community_members_etc")) %>%
+  mutate(audience_list = str_split(audience, ",")) %>%
+  mutate(audience_list = lapply(audience_list, str_trim)) %>%
+  unnest(audience_list) %>%
+  mutate(audience_list = str_replace_all(audience_list, 
+                                       "Parents_community_members_etc", 
+                                       "Parents, community members, etc.")) %>%
+  filter(audience_list != "", !is.na(audience_list)) %>%
+  mutate(value = 1L) %>%
+  pivot_wider(
+    id_cols = c(ma_id, unique_id, id, label),
+    names_from = audience_list,
+    values_from = value,
+    values_fill = 0L)
+
+# calculate proportions
+aud_count <- aud %>%
+  summarise(across(where(is.numeric), sum), .groups = "drop") %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "Category",
+    values_to = "Count")
+
+n_doc <- n_distinct(aud$id)
+
+aud_prop <- aud_count %>%
+  mutate(prop = Count / n_doc) %>% 
+  ungroup() %>%
+  filter(Category != "Practitioners")
+
+# build graph
+aud_viz <- 
+  ggplot(data = aud_prop, aes(x = reorder(Category, prop), y = prop)) +
+  geom_col(position = "dodge", fill = "#9dc892") + 
+  geom_text(aes(label = paste0(round(prop * 100, 0), "%")), hjust = -.3, 
+                size = 4, family = "serif") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     expand = expansion(mult = c(0, 0.1))) +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  coord_flip() +
+  labs(x = NULL,
+       y = 'Proportion of Studies', 
+       title = "") +
+  theme(legend = element_blank()) + viz_theme
+
+# view graph
+aud_viz
+
+# save image
+# ggsave("visuals/aud_viz.png", aud_viz, device = "png", height = 5, width = 7)
+```
+
+## Presentation of Evidence by MA
+```{r present-by-ma}
+# isolate columns needed
+present_docs <- data %>%
+  select(ma_id, ma_id, unique_id, id, label, present, present_other)
+
+present <- present_docs %>%
+  mutate(present_list = str_split(present, ",")) %>%
+  mutate(present_list = lapply(present_list, str_trim)) %>%
+  unnest(present_list) %>%
+  filter(present_list != "", !is.na(present_list)) %>%
+  mutate(value = 1L) %>%
+  pivot_wider(
+    id_cols = c(ma_id, unique_id, id, label, present_other),
+    names_from = present_list,
+    values_from = value,
+    values_fill = 0L)
+
+present_other <- present %>%
+  mutate(reason = case_when(
+      grepl("Q & A|interview", present_other, ignore.case = TRUE) ~ "interview",
+      grepl("abstract", present_other, ignore.case = TRUE) ~ "abstract",
+      grepl("Critique", present_other, ignore.case = TRUE) ~ "abstract",
+      grepl("no longer", present_other, ignore.case = TRUE) ~ "unavailable",
+      grepl("most of text", present_other, ignore.case = TRUE) ~ "summary",
+      grepl("mentioned", present_other, ignore.case = TRUE) ~ "reference",
+      `Reference list only` == 1 ~ "reference",
+      `Table` == 1 ~ "table",
+      `Visual` == 1 ~ "visual",
+      `Bullet points` == 1 ~ "list",
+      `Reference list only` == 1 ~ "reference",
+      `Whole document is summary of MA` == 1 ~ "summary",
+      `In Text - Other` == 1 ~ "in-text",
+      TRUE ~ NA_character_)) %>% 
+  mutate(reason = ifelse(is.na(reason), "in-text", reason))
+
+table(present_other$reason)
+
+filtered <- present_other %>%
+  filter(Other == 1, if_all(where(is.numeric) & 
+                              !any_of(c("Other", "Included with other references")), 
+                            ~ .x == 0))
+
+table(filtered$reason)
+
+
+# calculate proportions
+present_count <- present %>%
+  summarise(across(where(is.numeric), sum), .groups = "drop") %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "Category",
+    values_to = "Count") %>% 
+  filter(Category != "Included with other references") %>% 
+  filter(Category != "Other") %>%
+  bind_rows(tibble(Category = "Quote Only", Count = 4))
+
+n_present <- n_distinct(present$id)
+
+present_prop <- present_count %>%
+  mutate(prop = Count / n_present) %>% 
+  ungroup()
+
+sum(present_prop$Count)
+
+# build graph# buCountild graph
+present_viz <- 
+  ggplot(data = present_prop, aes(x = reorder(Category, prop), y = prop)) +
+  geom_col(position = "dodge", fill = "#9dc892") + 
+  geom_text(aes(label = paste0(round(prop * 100, 0), "%")), hjust = -.3, 
+                size = 4, family = "serif") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     expand = expansion(mult = c(0, 0.1))) +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  coord_flip() +
+  labs(x = NULL,
+       y = 'Proportion of Studies', 
+       title = "") +
+  theme(legend = element_blank()) + viz_theme
+
+# view graph
+present_viz
+
+# save image
+# ggsave("visuals/present_viz.png", present_viz, device = "png", height = 5, width = 7)
+```
+
+## Statistical info by MA
+```{r stat-by-ma}
+table(data$stat_info)
+
+stat_simple <- data %>% 
+  select(stat_info) %>% 
+  group_by(stat_info) %>%
+  summarise(Count = n(), .groups = "drop") %>%
+  mutate(prop = Count / sum(Count)) %>% 
+  ungroup() %>% 
+  mutate(stat_yes = ifelse(stat_info == "", "Not Applicable", stat_info))
+  
+table(stat_simple$stat_yes)
+
+stat_simple_viz <- 
+  ggplot(stat_simple, aes(x = stat_yes, y = prop)) +
+  geom_col(fill = "#9dc892") + 
+  geom_text(aes(label = paste0(round(prop * 100, 0), "%")), vjust = -.4, 
+                size = 4, family = "serif") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     expand = expansion(mult = c(0, 0.1))) +
+  labs(x = "Does Document/Citation Report Effect Statistics?",
+       y = "Proportion of Citations") +
+  viz_theme
+  
+stat_simple_viz
+
+# save image
+# ggsave("visuals/stat_simple.png", stat_simple_viz, device = "png", height = 5, width = 7)
+```
+
+## Other Descriptive info by MA
+```{r descrip-by-ma}
+table(data$descrip_info)
+
+descrip_simple <- data %>% 
+  select(descrip_info) %>% 
+  group_by(descrip_info) %>%
+  summarise(Count = n(), .groups = "drop") %>%
+  mutate(prop = Count / sum(Count)) %>% 
+  ungroup() %>% 
+  mutate(descrip_yes = ifelse(descrip_info == "", "Not Applicable", descrip_info))
+  
+table(descrip_simple$descrip_yes)
+
+descrip_simple_viz <- 
+  ggplot(descrip_simple, aes(x = descrip_yes, y = prop)) +
+  geom_col(fill = "#9dc892") + 
+  geom_text(aes(label = paste0(round(prop * 100, 0), "%")), vjust = -.4, 
+                size = 4, family = "serif") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     expand = expansion(mult = c(0, 0.1))) +
+  labs(x = "Does Document/Citation Report Descriptive Information?",
+       y = "Proportion of Citations") +
+  viz_theme
+
+descrip_simple_viz
+
+# save image
+# ggsave("visuals/descrip_simple.png", descrip_simple_viz, device = "png", height = 5, width = 7)
+
+```
+
+## Documents with more than one meta-analysis cited
+
+```{r multiple-citations}
+frequencies <- table(data$unique_id)
+
+repeated_values <- frequencies[frequencies > 1]
+
+repeated_values
+```
+
+## Number of Documents by MA AND Use
+```{r docs-by-ma-use}
+# isolate columns needed
+number_docs_use <- data %>%
+  select(ma_id, label) %>% 
+  mutate(ma_date = str_extract(label, "\\b\\d{4}\\b")) %>%
+  group_by(label, ma_id, ma_date) %>%
+  summarise(count = n(), .groups = "drop")
+
+# add labels to color code
+number_docs_use$interest <- ifelse(number_docs_use$ma_id %in% ma_stake, 
+                                   "MA Included an Interest-Holder",
+                                   "MA Did Not Include an Interest-Holder")
+number_docs_use$alt_es <- ifelse(number_docs_use$ma_id %in% ma_es_trans, 
+                                 "MA Transformed Effect Sizes",
+                                 "MA Did Not Transform Effect Sizes")
+number_docs_use$viz <- ifelse(number_docs_use$ma_id %in% ma_viz, 
+                              "MA Included a Vizualization",
+                              "MA Did Not Include a Visulation")
+number_docs_use$imp <- ifelse(number_docs_use$ma_id %in% ma_imp, 
+                              "MA Included Implications Section",
+                              "MA Did Not Include Implications Section")
+
+label_order <- number_docs_use %>%
+  distinct(label, ma_date) %>%
+  arrange(ma_date) %>%
+  pull(label)
+
+number_docs_use$label <- factor(number_docs_use$label, levels = label_order)
+```
+
+## Meta-analyses with interest holder
+```{r interest-holder}
+# build graph
+docu_ma_interest <- 
+  ggplot(data = number_docs_use, aes(x = label, y = count, fill = interest)) +
+  geom_col() + 
+  scale_fill_brewer(palette = "Accent", guide = guide_legend(title = NULL)) +
+  geom_text(aes(label = ifelse(count > 0, count, "")), 
+            position = position_dodge(0.9), vjust = -.3, 
+            family = "serif", size = 4) +
+  viz_theme +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom") +
+  labs(x = "Meta-Analysis", 
+       y = "Number of Citing Documents", 
+       title = "")
+
+# view graph
+docu_ma_interest
+
+# save image
+# ggsave("visuals/docu_ma_interest.png", docu_ma_interest, device = "png", height = 5, width = 7)
+```
+
+## Meta-analyses with alternative effect size
+```{r alt-effects}
+# build graph
+docu_ma_alt_es <- 
+  ggplot(data = number_docs_use, aes(x = label, y = count, fill = alt_es)) +
+  geom_col() + 
+  scale_fill_brewer(palette = "Accent", guide = guide_legend(title = NULL)) +
+  geom_text(aes(label = ifelse(count > 0, count, "")), 
+            position = position_dodge(0.9), vjust = -.3, 
+            family = "serif", size = 4) +
+  viz_theme +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom") +
+  labs(x = "Meta-Analysis", 
+       y = "Number of Citing Documents", 
+       title = "")
+
+# view graph
+docu_ma_alt_es
+
+# save image
+# ggsave("visuals/docu_ma_alt_es.png", docu_ma_alt_es, device = "png", height = 5, width = 7)
+```
+
+## Meta-analyses with visuals
+
+```{r visuals}
+# build graph
+docu_ma_viz <- 
+  ggplot(data = number_docs_use, aes(x = label, y = count, fill = viz)) +
+  geom_col() + 
+  scale_fill_brewer(palette = "Accent", guide = guide_legend(title = NULL)) +
+  geom_text(aes(label = ifelse(count > 0, count, "")), 
+            position = position_dodge(0.9), vjust = -.3, 
+            family = "serif", size = 4) +
+  viz_theme +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom") +
+  labs(x = "Meta-Analysis", 
+       y = "Number of Citing Documents", 
+       title = "")
+
+# view graph
+docu_ma_alt_es
+
+# save image
+# ggsave("visuals/docu_ma_viz.png", docu_ma_viz, device = "png", height = 5, width = 7)
+```
+
+## Meta-analyses with implications
+
+```{r implications}
+# build graph
+docu_ma_imp <- 
+  ggplot(data = number_docs_use, aes(x = label, y = count, fill = imp)) +
+  geom_col() + 
+  scale_fill_brewer(palette = "Accent", guide = guide_legend(title = NULL)) +
+  geom_text(aes(label = ifelse(count > 0, count, "")), 
+            position = position_dodge(0.9), vjust = -.3, 
+            family = "serif", size = 4) +
+  viz_theme +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom") +
+  labs(x = "Meta-Analysis", 
+       y = "Number of Citing Documents", 
+       title = "")
+
+# view graph
+docu_ma_imp
+
+# save image
+# ggsave("visuals/docu_ma_imp.png", docu_ma_imp, device = "png", height = 5, width = 7)
+```
+
+## Meta-analyses with alternative effect size version 2
+
+```{r alt-effects-2}
+# build graph
+docu_ma_alt_es_V2 <- 
+  ggplot(data = number_docs_use, aes(x = label, y = count, fill = alt_es)) +
+  geom_col() + 
+  scale_fill_brewer(palette = "Accent", guide = guide_legend(title = NULL)) +
+  geom_text(aes(label = ifelse(count > 0, count, "")), 
+            position = position_dodge(0.9), vjust = -.3, 
+            family = "serif", size = 4) +
+  viz_theme +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "bottom") +
+  labs(x = "Meta-Analysis", 
+       y = "Number of Citing Documents", 
+       title = "")
+
+# view graph
+docu_ma_alt_es_V2
+
+# save image
+# ggsave("visuals/docu_ma_alt_es_V2.png", docu_ma_alt_es_V2, device = "png", height = 5, width = 7)
+```
+
+## Description of effect
+```{r description-by-ma}
+# isolate columns needed
+descrip_docs <- data %>%
+  select(ma_id, unique_id, id, label, es_descrip)
+
+# split and dummy code responses
+descrip <- descrip_docs %>%
+  select(es_descrip) %>% 
+  mutate(es_descrip = case_when(es_descrip == "Other,No" ~ "No",
+                                es_descrip == "Yes,Other" ~ "Yes",
+                                es_descrip == "" ~ "No",
+                                TRUE ~ es_descrip)) %>% 
+  mutate(es_descrip = if_else(es_descrip == "" | is.na(es_descrip), 
+                              "No", es_descrip)) %>%
+  count(es_descrip, name = "Count") %>%
+  mutate(prop = Count/sum(Count)) %>% 
+  ungroup()
+
+
+
+# basic graph
+
+descrip_basic <- ggplot(data = descrip, aes(x = es_descrip, y = prop)) +
+  geom_col(fill = "#9dc892") +
+  geom_text(aes(label = paste0(round(prop * 100, 0), "%")), vjust = -.3, 
+                size = 4, family = "serif") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     expand = expansion(mult = c(0, 0.1))) + 
+  labs(x = "Does Document/Citation Describe Effects?",
+       y = "Proportion of Citations") +
+  viz_theme
+
+
+descrip_basic
+
+# save image
+# ggsave("visuals/descrip_basic.png", descrip_basic, device = "png", height = 5, width = 7)
+
+```
+
+```{r other-stats}
+stat_other <- data %>% 
+  select(es_other)
+```
+
+## ES Alt by MA
+
+Not included in paper. 
+
+```{r alt-stat-by-ma}
+table(data$es_alt)
+
+# isolate columns needed
+alt_docs <- data %>%
+  select(ma_id, unique_id, id, label, es_alt) %>%
+  filter(!is.na(es_alt) & es_alt != "") %>%
+  mutate(ma_alt = case_when(
+      ma_id %in% ma_es_trans ~ "Yes",
+      TRUE ~ "No")) %>% 
+  group_by(ma_alt, label, es_alt) %>%
+  summarise(Count = n(), .groups = "drop")
+
+alt_prop <- alt_docs %>%
+  mutate(prop = Count / sum(Count)) %>% 
+  ungroup()
+
+table(alt_prop$ma_alt)
+
+# build graph
+alt_viz <- 
+  ggplot(data = alt_prop, aes(label, prop, fill = es_alt, color = as.factor(ma_alt))) +
+  geom_col(position = "stack", size = 1) + 
+  geom_text(aes(label = paste0(round(prop * 100, 0), "%")), 
+            position = position_stack(vjust = .5), 
+            family = "serif", size = 4) +
+  scale_y_continuous(labels = scales::percent_format(),
+                     expand = expansion(mult = c(0, 0.1))) +
+    scale_color_manual(values = c("Yes" = "black", 
+                                "No" = "white"), 
+                     guide = "none") +
+  labs(x = NULL,
+       y = 'Proportion of Studies', 
+       title = "") +
+  viz_theme 
+
+# view graph
+alt_viz
+
+# save image
+# ggsave("visuals/alt_es_viz.png", alt_viz, device = "png", height = 5, width = 7)
+```
+
+## Variation
+```{r variation}
+# isolate columns needed
+var_docs <- data %>%
+  select(variability) %>%
+  filter(!is.na(variability), variability != "") %>%
+  count(variability, name = "Count") %>%
+  rename(Category = variability) %>%
+  mutate(prop = Count / sum(Count)) %>%
+  ungroup()
+
+var_basic <- ggplot(data = var_docs, aes(x = Category, y = prop)) +
+  geom_col(fill = "#9dc892") +
+  geom_text(aes(label = paste0(round(prop * 100, 0), "%")), vjust = -.3, 
+                size = 4, family = "serif") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     expand = expansion(mult = c(0, 0.1))) + 
+  labs(x = "Does Document/Citation mention variability in effects?",
+       y = "Proportion of Citations") +
+  viz_theme
+
+var_basic
+
+# save image
+# ggsave("visuals/var_basic.png", var_basic, device = "png", height = 5, width = 7)
+```
+
+## Does study name citation as MA
+```{r names-ma}
+table(data$name_ma)
+
+# overall mention MA
+ma_overall <- ggplot(data, aes(name_ma)) +
+  geom_bar(fill = "#9dc892") +
+  viz_theme
+
+ma_overall
+
+# save image
+# ggsave("visuals/ma_overall.png", ma_overall, device = "png", height = 5, width = 7)
+
+# Look at others
+is_ma_other <- data %>%
+  filter(name_ma == "Other") %>%
+  select(ma_id, label, id, name_ma, name_ma_explain)
+```
+
+## Design of MA
+```{r design-ma}
+table(data$design)
+
+# overall descriptive
+design_overall <- ggplot(data, aes(design)) +
+  geom_bar(fill = "#9dc892") +
+  viz_theme
+
+design_overall
+
+# save image
+# ggsave("visuals/design_overall.png", design_overall, device = "png", height = 5, width = 7)
+```
+
+## Moderator of MA
+```{r moder-ma}
+table(data$moderator)
+
+mod_prop <- data %>% 
+  select(moderator) %>% 
+  group_by(moderator) %>%
+  summarise(Count = n(), .groups = "drop") %>%
+  mutate(prop = Count / sum(Count)) %>% 
+  ungroup() %>% 
+  mutate(moderator = ifelse(moderator == "", "Not Applicable", moderator))
+
+# overall moderators
+mod_simple_viz <- 
+  ggplot(mod_prop, aes(x = moderator, y = prop)) +
+  geom_col(fill = "#9dc892") + 
+  geom_text(aes(label = paste0(round(prop * 100, 0), "%")), vjust = -.4, 
+                size = 4, family = "serif") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     expand = expansion(mult = c(0, 0.1))) +
+  labs(x = "Does Document/Citation Report Moderators?",
+       y = "Proportion of Citations") +
+  viz_theme
+
+mod_simple_viz
+
+# save image
+# ggsave("visuals/mods_overall.png", mod_simple_viz, device = "png", height = 5, width = 7)
+```
+## Codes for studies only
+```{r study-use-of-ma}
+# cited for design of study
+table(data$cite_design)
+
+# cited for analysis method
+table(data$stat_analysis)
+
+# cited for interpretation
+table(data$interpretation)
+
+# cited for moderator choice
+table(data$mod_design)
+
+# cited for expected relationship/hypothesis
+table(data$expected)
+
+# cited for framework of results
+table(data$frame)
+```
+
+# PICOTS & Limitation by MA
+```{r gen-by-ma}
+data[data == "Other,Yes"] <- "Yes"
+data[data == "No,Other"] <- "Other"
+data[data == ""] <- "Not Applicable" 
+
+table(data$population)
+
+gen_vars <- c("population", "intervention", "comparison", "outcome", 
+              "timing", "setting", "limitations")
+
+data <- data[complete.cases(data[, gen_vars]), ]
+table(data$population)
+
+gen <- data %>%
+  select(ma_id, population, intervention, comparison, outcome, timing, setting, limitations) %>%
+  pivot_longer(cols = -ma_id,
+               names_to = "gen_item",
+               values_to = "response") %>%
+  count(ma_id, gen_item, response, name = "count")
+
+# Build graph
+gen_viz <- ggplot(gen, aes(x = gen_item, y = count, fill = response)) +
+  geom_col(position = "dodge") +
+  facet_wrap(vars(ma_id)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+gen_viz
+```
+
+# PICOTS overall
+```{r gen-overall}
+gen_all <- gen %>%
+  filter(gen_item != "limitations",
+         response != "Not Applicable") %>% 
+  group_by(gen_item, response) %>%
+  summarise(count = sum(count), .groups = "drop") %>%
+  group_by(gen_item) %>%
+  mutate(prop = count / sum(count)) %>%
+  ungroup()
+
+gen_all$labels <- factor(
+  tools::toTitleCase(as.character(gen_all$gen_item)), levels = c("Population", 
+                                                     "Intervention", 
+                                                     "Comparison", "Outcome", 
+                                                     "Timing", "Setting"))
+
+
+gen_all_viz <- ggplot(gen_all, aes(x = labels, y = prop, fill = response)) +
+  geom_col(position = position_dodge(width = 0.9)) +
+  geom_text(aes(label = ifelse(count > 0, 
+                               scales::percent(prop, accuracy = 1), "")),
+                position = position_dodge(width = 0.9),
+                vjust = -0.5, family = "serif", size = 4) +
+  scale_y_continuous(labels = scales::percent_format(),
+                     expand = expansion(mult = c(0, 0.1))) +
+  scale_fill_manual(values = c("#9dc892", "#fee8a9", "#beaed4")) +
+  viz_theme +
+  theme(axis.title = element_blank(),
+        legend.position = "bottom",
+        legend.title = element_blank())
+  
+
+gen_all_viz
+
+# save image
+# ggsave("visuals/gen_yes.png", gen_all_viz, device = "png", height = 5, width = 7)
+```

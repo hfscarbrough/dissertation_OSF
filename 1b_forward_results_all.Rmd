@@ -1,0 +1,225 @@
+---
+title: "All Documents"
+author: "Hannah Scarbrough"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+Note that this is ALL documents including those without access. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading Packages
+```{r load-packages, message=FALSE}
+library(tidyverse)   # For ggplot, dplyr, and friends
+library(sf)          # For GIS 
+library(countrycode) # To add country codes
+```
+
+## Global Theme
+```{r global-theme, message=FALSE}
+viz_theme <- theme_classic() + 
+  theme_classic() +
+  theme(legend.text = element_text(size = 12, color = "black", family = "serif"),
+        legend.title = element_text(size = 12, color = "black", family = "serif"),
+        axis.text = element_text(color = "black", size = 10, family = "serif"),
+        axis.title = element_text(size = 12, color = "black", family = "serif"))
+```
+
+## Loading Data
+```{r load-data, message=FALSE}
+raw_data <- read.csv("data/codebook_1_clean.csv")
+included_ma <- read.csv("data/ma_data.csv")
+world_map <- read_sf("maps/ne_110m_admin_0_countries.shp")
+```
+
+Limiting data to only documents that are available and cite the associated meta-analysis
+
+```{r cite-confirmed}
+ma <- included_ma %>%
+  select(ma_id, label) %>%
+  rename(ma_ID = ma_id)
+
+# merge labels into coded data for study 1
+s1 <- merge(raw_data, ma, by = "ma_ID")
+
+table(s1$cite_conf)
+table(s1$context)
+
+s1_include <- s1 %>% 
+  filter(cite_conf == "Yes")
+
+write.csv(s1_include, "data/s1_clean.csv")
+```
+
+
+## Number of documents
+```{r quick-descriptives}
+## Number of unique documents
+length(unique(s1_include$unique_ID))
+
+## confirming only the documents that cite MAs and I have access are in this sample
+table(s1_include$cite_conf)
+```
+
+## Documents by context
+```{r count-by-MA}
+table(s1_include$context)
+
+ma_group_cites <- s1_include %>%
+  filter(context != "", !is.na(context)) %>%
+  group_by(ma_ID, context) %>%
+  summarise(count = n()) %>%
+  pivot_wider(id_cols = ma_ID, names_from = context, values_from = count) %>%
+  print()
+
+# Save for a table
+write.csv(ma_group_cites, file = "tables/cites_by_ma_table.csv")
+```
+
+## ALL Documents by Meta-Analysis
+```{r documents-by-ma}
+## table
+ma_group <- s1_include %>%
+  group_by(ma_ID) %>%
+  summarise(count = n()) %>%
+  print()
+
+## histogram
+ggplot(ma_group, aes(x = factor(ma_ID), y = count, fill = ma_ID)) +
+  geom_col() +
+  geom_text(aes(label = count), vjust = -0.5, size = 3.5) +
+  labs(x = NULL, y = 'Number of documents', 
+       title = "Number of documents by MA") +
+  guides(fill = "none") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) 
+```
+
+# Documents by Meta-Analysis and Publication Year
+```{r documents-time-visual}
+time <- s1 %>% 
+    select(ma_ID, label, unique_ID, pub_date) %>% 
+    mutate(pub_date = ifelse(is.na(pub_date), "No Date", pub_date)) %>%
+    mutate(ma_date = str_extract(label, "\\b\\d{4}\\b")) %>% 
+    group_by(label, ma_date, pub_date) %>%
+    summarise(count = n())
+
+label_order <- time %>%
+  distinct(label, ma_date) %>%
+  arrange(ma_date) %>%
+  pull(label)
+
+time$label <- factor(time$label, levels = label_order)
+
+time_viz <- ggplot(time, aes(x = label, y = count)) +
+  geom_col(aes(fill = as.factor(pub_date)), position = "dodge") +
+  theme_classic() +
+  scale_fill_manual(values = c("#fb9a99", "#fdc086", "#fee8a9", "#9dc892", "#5690c1", "#beaed4")) +
+  viz_theme +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = c(.92, .7)) +
+  labs(x = "Meta-Analysis",
+       y = "Number of Documents",
+       fill = "Document\nPublication")
+
+time_viz
+
+# save image
+# ggsave("visuals/doc_over_time.png", time_viz, device = "png", height = 5, width = 7)
+```
+
+# Self-Citations
+```{r self-citaiton}
+table(s1_include$self_cite)
+```
+
+# Sorting by language
+```{r language-list}
+lang <- s1 %>%
+  group_by(cite_lang) %>%
+  summarise(count = n()) %>%
+  print()
+```
+
+# Sorting by country
+```{r country-list}
+country <- s1 %>%
+  group_by(cite_country) %>%
+  summarise(count = n()) %>%
+  print()
+```
+
+# Map Making
+```{r building-map}
+country$country_code <- countrycode(country$cite_country,
+                               origin = "country.name",
+                               destination = "iso3c")
+
+world_sans_antarctica <- world_map %>% 
+  filter(ISO_A3 != "ATA")
+
+ma_countries_map <- world_sans_antarctica %>% 
+  left_join(country, by = c("ISO_A3" = "country_code"))
+
+levels(ma_countries_map$count_category)
+
+table(ma_countries_map$count_category, useNA = "ifany")
+
+ma_countries_map <- ma_countries_map %>%
+  mutate(count_category = case_when(
+    is.na(count)          ~ NA_character_,
+    count <= 10           ~ "0-10",
+    count <= 20           ~ "11-20",
+    count <= 30           ~ "21-30",
+    count <= 50           ~ "31-50",
+    count <= 100          ~ "51-100",
+    count > 100           ~ "100+")) %>%
+  mutate(count_category = factor(count_category,
+                                 levels = c("0-10", "11-20", "21-30", 
+                                            "31-50", "51-100", "100+")))
+
+all_levels <- c("0-10", "11-20", "21-30", "31-50", "51-100", "100+")
+
+ma_countries_map <- ma_countries_map %>%
+  mutate(count_category = factor(count_category, levels = all_levels))
+
+# Create a blue palette from light to dark starting with #caeaff
+green_palette_fun <- colorRampPalette(c("#e9f3e7", "#589149"))
+green_palette <- green_palette_fun(6)
+names(green_palette) <- c("0-10", "11-20", "21-30", "31-50", "51-100", "100+")
+
+ma_map <- ggplot(ma_countries_map) + 
+  geom_sf(aes(fill = count_category), color = "gray", linewidth = 0.25, 
+          show.legend = TRUE) +
+  scale_fill_manual(values = green_palette, na.value = "white", drop = FALSE) +
+  labs(fill = "Number of Documents") +
+  theme_void() +
+  theme(legend.position = "bottom") + 
+  theme(legend.text = element_text(size = 12, color = "black", family = "serif"),
+        legend.title = element_text(size = 12, color = "black", family = "serif"))
+
+ma_map
+```
+
+## Save the map
+```{r save-map}
+# save image
+# ggsave("visuals/ma_map.png", ma_map, width = 7.5, height = 4.6)
+```
+
+
+# Practice Documents 
+
+```{r practice}
+# save practice only
+
+s1_practice <- s1_include %>%
+  filter(context == "Practice")
+
+unique_s1 <- unique(s1_practice$unique_ID)
+
+write.csv(s1_practice, file = "data/s1_practice.csv")
+```

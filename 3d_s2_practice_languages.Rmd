@@ -1,0 +1,64 @@
+---
+title: "Practice - Country"
+author: "Hannah Scarbrough"
+date: "2026-02-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading Packages
+```{r load-packages, message=FALSE}
+library(tidyverse)
+library(RColorBrewer)
+library(scales)
+```
+
+## Global Themes 
+```{r global-theme, message=FALSE}
+viz_theme <- theme_classic() + 
+             theme(legend.text = element_text(size = 12, color = "black", family = "serif"),
+                   legend.title = element_text(size = 12, color = "black", family = "serif"),
+                   axis.text = element_text(size = 10, color = "black", family = "serif"),
+                   axis.title = element_text(size = 12, color = "black", family = "serif"))
+
+```
+
+## Importing Data
+```{r data, message=FALSE}
+# Subset data
+doc_data <- read.csv("data/s2_data_clean.csv")
+
+# Meta-analyses
+included_ma <- read.csv("data/ma_data.csv")
+
+# Codebook 1
+codebook_1 <- read.csv("data/Codebook_1_clean.csv")
+```
+
+```{r country-list}
+practice <- doc_data %>% 
+  select(id, unique_id)
+
+practice_dedupe <- practice[!duplicated(practice$unique_id),]
+
+practice_docs <- practice %>%
+  pull(unique_id)
+
+country <- codebook_1 %>% 
+  select(unique_ID, cite_country, cite_lang) %>% 
+  mutate(unique_id = unique_ID) %>% 
+  mutate(prac_yes = ifelse(unique_id %in% practice_docs, "Yes", "No")) %>% 
+  filter(prac_yes == "Yes")
+
+country_dedupe <- country[!duplicated(country$unique_id),]
+```
+
+```{r countries}
+table(country_dedupe$cite_country)
+
+table(country_dedupe$cite_lang)
+```
+

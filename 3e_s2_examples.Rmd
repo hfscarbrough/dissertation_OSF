@@ -1,0 +1,149 @@
+---
+title: "Example Meta-Analyses"
+author: "Hannah Scarbrough"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading Packages
+```{r load-packages, message=FALSE}
+library(tidyverse) # for data cleaning and visualizations
+library(RColorBrewer) # for better colors
+```
+
+## Load Data
+```{r load-data}
+example <- read.csv("data/example_data.csv")
+```
+
+```{r stat-by-ma}
+stat_example <- example %>% 
+  select(label.x, stat_info) %>% 
+  mutate(stat_info = if_else(stat_info == "" | is.na(stat_info), "No", stat_info)) %>%
+  count(label.x, stat_info, name = "Count") %>%
+  rename(Category = stat_info)
+
+stat_ma <- ggplot(stat_example, aes(x = label.x, y = Count)) +
+  geom_col(aes(fill = Category), position = "dodge") +
+  geom_text(aes(label = ifelse(Count > 0, Count, ""), group = Category), 
+            position = position_dodge(0.9), vjust = -.4, 
+            family = "serif", size = 4) +
+  scale_fill_manual(values = c("#9dc892", "#fb9a99", "#beaed4")) +
+  labs(x = "", 
+       y = "Number of Documents/Citations", 
+       fill = "Reports Effect Size") +
+  theme_classic() +
+  theme(legend.position = "bottom",
+        axis.text = element_text(color = "black", size = 12, family = "serif"),
+        axis.title.y = element_text(size = 12, color = "black", family = "serif"))
+
+stat_ma
+
+# save image
+# ggsave("visuals/example_stat.png", stat_ma, device = "png", height = 5, width = 7)
+```
+
+## Effect Description
+
+```{r effect-by-ma}
+table(example$es_descrip)
+
+esdescrip_example <- example %>% 
+  select(label.x, es_descrip) %>% 
+  mutate(es_descrip = case_when(es_descrip == "Other,No" ~ "No",
+                                es_descrip == "Yes,Other" ~ "Yes",
+                                TRUE ~ es_descrip)) %>% 
+  mutate(es_descrip = if_else(es_descrip == "" | is.na(es_descrip), "No", es_descrip)) %>%
+  count(label.x, es_descrip, name = "Count") %>%
+  rename(Category = es_descrip)
+
+esdescrip_ma <- ggplot(esdescrip_example, aes(x = label.x, y = Count)) +
+  geom_col(aes(fill = Category), position = "dodge") +
+  geom_text(aes(label = ifelse(Count > 0, Count, ""), group = Category), 
+            position = position_dodge(0.9), vjust = -.4, 
+            family = "serif", size = 4) +
+  scale_fill_manual(values = c("#9dc892", "#fee8a9", "#beaed4")) +
+  labs(x = "", 
+       y = "Number of Documents/Citations", 
+       fill = "Describes Effect Size") +
+  theme_classic() +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 12, color = "black", family = "serif"),
+        legend.title = element_text(size = 12, color = "black", family = "serif"),
+        axis.text = element_text(color = "black", size = 12, family = "serif"),
+        axis.title.y = element_text(size = 12, color = "black", family = "serif"))
+
+esdescrip_ma
+
+# save image
+# ggsave("visuals/example_descrip.png", esdescrip_ma, device = "png", height = 5, width = 7)
+```
+
+## Moderators
+
+```{r mods-by-ma}
+table(example$moderator)
+
+moderator_example <- example %>% 
+  select(label.x, moderator) %>% 
+  mutate(moderator = if_else(moderator == "" | is.na(moderator), "No", moderator)) %>%
+  count(label.x, moderator, name = "Count") %>%
+  rename(Category = moderator)
+
+moderator_ma <- ggplot(moderator_example, aes(x = label.x, y = Count)) +
+  geom_col(aes(fill = Category), position = "dodge") +
+  geom_text(aes(label = ifelse(Count > 0, Count, ""), group = Category), 
+            position = position_dodge(0.9), vjust = -.4, 
+            family = "serif", size = 4) +
+  scale_fill_manual(values = c("#9dc892", "#fee8a9", "#beaed4")) +
+  labs(x = "", 
+       y = "Number of Documents/Citations", 
+       fill = "Describes Moderators") +
+  theme_classic() +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 12, color = "black", family = "serif"),
+        legend.title = element_text(size = 12, color = "black", family = "serif"),
+        axis.text = element_text(color = "black", size = 12, family = "serif"),
+        axis.title.y = element_text(size = 12, color = "black", family = "serif"))
+
+moderator_ma
+
+# save image
+# ggsave("visuals/example_moderator.png", moderator_ma, device = "png", height = 5, width = 7)
+```
+
+## Variability
+
+```{r var-by-ma}
+table(example$variability)
+
+variability_example <- example %>% 
+  select(label.x, variability) %>% 
+  mutate(variability = if_else(variability == "" | is.na(variability), "No", variability)) %>%
+  count(label.x, variability, name = "Count") %>%
+  rename(Category = variability)
+
+variability_ma <- ggplot(variability_example, aes(x = label.x, y = Count)) +
+  geom_col(aes(fill = Category), position = "dodge") +
+  geom_text(aes(label = ifelse(Count > 0, Count, ""), group = Category), 
+            position = position_dodge(0.9), vjust = -.4, 
+            family = "serif", size = 4) +
+  scale_fill_manual(values = c("#9dc892", "#fee8a9", "#beaed4")) +
+  labs(x = "", 
+       y = "Number of Documents/Citations", 
+       fill = "Describes variability") +
+  theme_classic() +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 12, color = "black", family = "serif"),
+        legend.title = element_text(size = 12, color = "black", family = "serif"),
+        axis.text = element_text(color = "black", size = 12, family = "serif"),
+        axis.title.y = element_text(size = 12, color = "black", family = "serif"))
+
+variability_ma
+
+# save image
+# ggsave("visuals/example_variability.png", variability_ma, device = "png", height = 5, width = 7)
+```

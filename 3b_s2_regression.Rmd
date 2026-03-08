@@ -1,0 +1,405 @@
+---
+title: "Regressions"
+author: "Hannah Scarbrough"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading Packages
+```{r load-packages, message=FALSE}
+library(tidyverse)
+library(RColorBrewer)
+library(scales)
+```
+
+## Global Themes 
+```{r global-theme, message=FALSE}
+viz_theme <- theme_classic()
+```
+
+## Importing Data
+```{r data}
+# Documents
+data <- read.csv("data/s2_data_clean.csv")
+
+# Meta-analyses
+included_ma <- read.csv("data/ma_data.csv")
+```
+
+## Merge MA URE Features
+```{r merge-doc-type}
+# select needed columns from included ma
+ma_data <- included_ma %>%
+  select(ma_id, out_mathematics, out_reading, stake_engagement, es_metrics, 
+         visualization, section)
+
+# select needed columns from s2
+s2 <- data %>%
+  select(ma_id:id, stat_info, descrip_info, variability, name_ma)
+
+
+data_ma <- merge(s2, ma_data, by = "ma_id")
+```
+
+## Lists of MAs by feature
+```{r ma-features}
+# Math
+ma_math <- included_ma %>%
+  filter(out_mathematics == "Yes") %>%
+  pull(ma_id, label)
+
+# ma_math
+
+# Reading
+ma_read <- included_ma %>%
+  filter(out_reading == "Yes") %>%
+  pull(ma_id, label)
+
+# Meta-Analyses with Visualizations
+ma_viz <- included_ma %>%
+  filter(visualization == "Yes") %>%
+  pull(ma_id, label)
+
+# ma_viz
+
+# Meta-Analyses with Effect Transformations
+ma_es_trans <- included_ma %>%
+  filter(es_metrics == "Yes") %>%
+  pull(ma_id, label)
+
+# ma_es_trans
+
+# Meta-Analyses with Stakeholders
+ma_stake <- included_ma %>%
+  filter(stake_engagement == "Yes") %>%
+  pull(ma_id,label)
+
+# ma_stake
+
+# Meta-Analyses with implications
+ma_imp <- included_ma %>%
+  filter(section == "Yes") %>%
+  pull(ma_id,label)
+
+# ma_imp
+```
+
+# Correlations
+
+Not included in manuscript
+
+## Stakeholders 
+
+```{r stake_corr}
+table(data_ma$stake_engagement)
+  
+stake_counts <- data_ma %>%
+  select(ma_id) %>%
+  group_by(ma_id) %>%
+  summarise(id_count = n()) %>% 
+  add_row(ma_id = "M10001", id_count = 0) %>% 
+  add_row(ma_id = "M10002", id_count = 0) %>% 
+  add_row(ma_id = "M10011", id_count = 0) %>% 
+  mutate(stake_1 = ifelse(ma_id %in% ma_stake, 1, 0))
+
+# correlate ID frequency with probability of stake = 1
+cor(stake_counts$id_count, stake_counts$stake_1)
+cor.test(stake_counts$id_count, stake_counts$stake_1)
+
+# IDs that appear more often are less likely to have stake = 1. This is the biggest correlation of the bunch
+
+
+# Average number of docs
+mean_value <- mean(stake_counts$id_count, na.rm = TRUE)
+mean_value
+
+```
+
+## Effect Size 
+
+```{r es_corr}
+table(data_ma$es_metrics)
+  
+es_counts <- data_ma %>%
+  select(ma_id) %>% 
+  group_by(ma_id) %>%
+  summarise(id_count = n()) %>% 
+  add_row(ma_id = "M10001", id_count = 0) %>% 
+  add_row(ma_id = "M10002", id_count = 0) %>% 
+  add_row(ma_id = "M10011", id_count = 0) %>% 
+  mutate(es_1 = ifelse(ma_id %in% ma_es_trans, 1, 0))
+
+# correlate ID frequency with probability of es = 1
+cor(es_counts$id_count, es_counts$es_1)
+cor.test(es_counts$id_count, es_counts$es_1)
+
+# IDs that appear more often are verrrry slightly more likely to have es = 1
+```
+
+## Viz
+
+```{r viz_corr}
+table(data_ma$visualization)
+  
+viz_counts <- data_ma %>%
+  select(ma_id) %>% 
+  group_by(ma_id) %>%
+  summarise(id_count = n()) %>% 
+  add_row(ma_id = "M10001", id_count = 0) %>% 
+  add_row(ma_id = "M10002", id_count = 0) %>% 
+  add_row(ma_id = "M10011", id_count = 0) %>% 
+  mutate(viz_1 = ifelse(ma_id %in% ma_viz, 1, 0))
+
+# correlate ID frequency with probability of viz = 1
+cor(viz_counts$id_count, viz_counts$viz_1)
+cor.test(viz_counts$id_count, viz_counts$viz_1)
+
+# IDs that appear more often are verrrry slightly less likely to have es = 1
+```
+
+
+## Implications
+
+```{r imp_corr}
+table(data_ma$section)
+  
+imp_counts <- data_ma %>%
+  select(ma_id) %>% 
+  group_by(ma_id) %>%
+  summarise(id_count = n()) %>% 
+  add_row(ma_id = "M10001", id_count = 0) %>% 
+  add_row(ma_id = "M10002", id_count = 0) %>% 
+  add_row(ma_id = "M10011", id_count = 0) %>% 
+  mutate(imp_1 = ifelse(ma_id %in% ma_imp, 1, 0))
+
+# correlate ID frequency with probability of implications = 1
+cor(imp_counts$id_count, imp_counts$imp_1)
+cor.test(imp_counts$id_count, imp_counts$imp_1)
+
+# IDs that appear more often are verrrry slightly more likely to have es = 1
+```
+
+
+# Simple Regressions
+
+Not included in manuscript
+
+```{r mean_docs}
+mean(stake_counts$id_count)
+```
+
+
+## stake 
+```{r stake_reg}
+stake_reg <- glm(id_count ~ stake_1, data = stake_counts)
+
+summary(stake_reg)
+confint(stake_reg)
+
+```
+
+## Effect Sizes 
+```{r es_reg}
+es_reg <- glm(id_count ~ es_1, data = es_counts)
+
+summary(es_reg)
+confint(es_reg)
+
+# including es alternative = more citations on average
+
+```
+
+## Visualization
+```{r viz_reg}
+viz_reg <- glm(id_count ~ viz_1, data = viz_counts)
+
+summary(viz_reg)
+confint(viz_reg)
+
+# including visual = less citations on average
+
+```
+
+## Implications
+```{r imp_reg}
+imp_reg <- glm(id_count ~ imp_1, data = imp_counts)
+
+summary(imp_reg)
+confint(imp_reg)
+
+# including implications = more citations on average
+
+```
+
+
+# Outcome
+
+## Correlation
+```{r out_corr}
+table(data_ma$es_metrics)
+  
+out_counts <- data_ma %>%
+  select(ma_id) %>% 
+  group_by(ma_id) %>%
+  summarise(id_count = n()) %>% 
+  add_row(ma_id = "M10001", id_count = 0) %>% 
+  add_row(ma_id = "M10002", id_count = 0) %>% 
+  add_row(ma_id = "M10011", id_count = 0) %>% 
+  mutate(out_read_1 = ifelse(ma_id %in% ma_read, 1, 0))
+
+# correlate ID frequency with outcome = reading
+cor(out_counts$id_count, out_counts$out_read_1)
+cor.test(out_counts$id_count, out_counts$out_read_1)
+
+# IDs that appear more often are verrrry slightly more likely to be reading
+```
+
+## Regression
+```{r out_reg}
+out_reg <- glm(id_count ~ out_read_1, data = out_counts)
+
+summary(out_reg)
+confint(out_reg)
+
+# including implications = more citations on average
+
+math <- 6.333 + 8.121
+math
+```
+
+## Full Model
+
+```{r full-reg-model}
+all_counts <- data_ma %>%
+  select(ma_id) %>% 
+  group_by(ma_id) %>%
+  summarise(id_count = n()) %>% 
+  add_row(ma_id = "M10001", id_count = 0) %>% 
+  add_row(ma_id = "M10002", id_count = 0) %>% 
+  add_row(ma_id = "M10011", id_count = 0) %>% 
+  mutate(read = ifelse(ma_id %in% ma_read, 1, 0)) %>%
+  mutate(stake = ifelse(ma_id %in% ma_stake, 1, 0)) %>%
+  mutate(es = ifelse(ma_id %in% ma_es_trans, 1, 0)) %>%
+  mutate(viz = ifelse(ma_id %in% ma_viz, 1, 0)) %>%
+  mutate(imp = ifelse(ma_id %in% ma_imp, 1, 0))
+
+all_reg <- glm(id_count ~ read + stake + es + viz + imp, data = all_counts)
+
+summary(all_reg)
+confint(all_reg)
+```
+
+## Checking interaction between topic and interest-holder
+
+```{r interaction-all-predictors}
+int_counts <- data_ma %>%
+  select(ma_id, out_reading, stake_engagement, es_metrics, visualization, section) %>%
+  mutate(
+    read  = ifelse(out_reading == "Yes", 1, 0),
+    stake = ifelse(stake_engagement == "Yes", 1, 0),
+    es    = ifelse(es_metrics == "Yes", 1, 0),
+    viz   = ifelse(visualization == "Yes", 1, 0),
+    imp   = ifelse(section == "Yes", 1, 0),) %>%
+  group_by(ma_id) %>%
+  summarise(
+    id_count = n(),
+    read  = max(read),
+    stake = max(stake),
+    es    = max(es),
+    viz   = max(viz),
+    imp   = max(imp),
+    .groups = "drop") %>% 
+  mutate(read_stake = read * stake)
+
+int_reg <- glm(id_count ~ read + stake + es + viz + imp + read_stake, data = int_counts)
+
+summary(int_reg)
+confint(int_reg)
+```
+
+## Only topic, interest holder, and interaction
+
+```{r interaction-limited-predictors}
+int_counts <- data_ma %>%
+  select(ma_id, out_reading, stake_engagement, es_metrics, visualization, section) %>%
+  mutate(
+    read  = ifelse(out_reading == "Yes", 1, 0),
+    stake = ifelse(stake_engagement == "Yes", 1, 0),
+    es    = ifelse(es_metrics == "Yes", 1, 0),
+    viz   = ifelse(visualization == "Yes", 1, 0),
+    imp   = ifelse(section == "Yes", 1, 0),) %>%
+  group_by(ma_id) %>%
+  summarise(
+    id_count = n(),
+    read  = max(read),
+    stake = max(stake),
+    es    = max(es),
+    viz   = max(viz),
+    imp   = max(imp),
+    .groups = "drop") %>% 
+  mutate(read_stake = read * stake)
+
+read_stake_reg <- glm(id_count ~ read + stake + read_stake, data = int_counts)
+
+summary(read_stake_reg)
+confint(read_stake_reg)
+```
+
+## Means and SDs
+```{r summary-stats}
+# Overall
+mean(all_counts$id_count)
+sd(all_counts$id_count)
+
+# Reading
+summary_read <- all_counts %>%
+  filter(read == 1) %>%
+  summarise(mean_val = mean(id_count, na.rm = TRUE),
+            sd_val = sd(id_count, na.rm = TRUE))
+summary_read
+
+# Reading
+summary_math <- all_counts %>%
+  filter(read == 0) %>%
+  summarise(mean_val = mean(id_count, na.rm = TRUE),
+            sd_val = sd(id_count, na.rm = TRUE))
+summary_math
+
+# Interest Holders
+summary_int <- all_counts %>%
+  filter(stake == 1) %>%
+  summarise(mean_val = mean(id_count, na.rm = TRUE),
+            sd_val = sd(id_count, na.rm = TRUE))
+summary_int
+
+# Alternative ES
+summary_alt_es <- all_counts %>%
+  filter(es == 1) %>%
+  summarise(mean_val = mean(id_count, na.rm = TRUE),
+            sd_val = sd(id_count, na.rm = TRUE))
+summary_alt_es
+
+# Visual
+summary_viz <- all_counts %>%
+  filter(viz == 1) %>%
+  summarise(mean_val = mean(id_count, na.rm = TRUE),
+            sd_val = sd(id_count, na.rm = TRUE))
+summary_viz
+
+# implications yes
+summary_imp_y <- all_counts %>%
+  filter(imp == 1) %>%
+  summarise(mean_val = mean(id_count, na.rm = TRUE),
+            sd_val = sd(id_count, na.rm = TRUE))
+summary_imp_y
+
+# implications no
+summary_imp_n <- all_counts %>%
+  filter(imp == 0) %>%
+  summarise(mean_val = mean(id_count, na.rm = TRUE),
+            sd_val = sd(id_count, na.rm = TRUE))
+summary_imp_n
+```

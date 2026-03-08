@@ -1,5 +1,5 @@
 ---
-title: "Selecting Case Study Articles"
+title: "Descriptives of Included Meta-Analayses"
 output: html_document
 ---
 
@@ -8,19 +8,19 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Loading Packages
-```{r}
+```{r messgae=FALSE}
 library(tidyverse)
 ```
 
 ## Loading Data
 
 This data set includes variables for the focus outcome of a study, along with URE related variables. 
-```{r}
-data <- read.csv("MA_data.csv")
+```{r load-data}
+data <- read.csv("data/ma_data.csv")
 ```
 
 ## Looking at data
-```{r}
+```{r ure-strategies}
 # Outcome; yes = math, no = reading
 table(data$out_mathematics)
 
@@ -30,7 +30,7 @@ table(data$pub_year.x)
 # Distribution of journal type
 table(data$journal_cat.x)
 
-# Distribution of stakeholder engagement
+# Distribution of interest-holder engagement
 table(data$stake_engagement)
 
 # Distribution of translated effect sizes
@@ -41,7 +41,7 @@ table(data$visualization)
 ```
 
 ## URE language types
-```{r}
+```{r ure-lang-type}
 # Distribution of inclusion of scope text
 table(data$text_type_scope)
 
@@ -57,8 +57,9 @@ table(data$text_type_tactical)
 # Distribution of inclusion of mandated text
 table(data$text_type_mandated)
 ```
-## Target Audience
-```{r}
+
+## Target Audience of Implications
+```{r audience}
 # Target audience teachers
 table(data$target_teacher)
 
@@ -78,8 +79,8 @@ table(data$target_other)
 table(data$target_unspec)
 ```
 
-## Text format
-```{r}
+## Implications Format
+```{r implications}
 # Implementation text
 table(data$section)
 
