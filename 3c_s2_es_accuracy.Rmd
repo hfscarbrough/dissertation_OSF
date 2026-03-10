@@ -108,7 +108,7 @@ es_type <- es_split %>%
 table(es_type$avg_es_yes)
 
 type_es <- ggplot(es_type, aes(avg_es_yes)) +
-  geom_bar(fill = "#9dc892") +
+  geom_bar(fill = "#7FC97F") +
   geom_text(stat = "count", aes(label = ..count..), vjust = -0.5, 
             family = "serif", size = 4) +
   labs(x = "Effect Sizes Reported", y = "Number of Documents") +
@@ -117,6 +117,6 @@ type_es <- ggplot(es_type, aes(avg_es_yes)) +
 type_es
 
 # save image
-# ggsave("visuals/es_reported.png", type_es, device = "png", height = 5, width = 7)
+# ggsave("visuals/es_reported.png", type_es, device = "png",  dpi = 600, height = 5, width = 7)
 ```
 

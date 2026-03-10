@@ -20,7 +20,7 @@ library(scales)
 viz_theme <- theme_classic() + 
              theme(legend.text = element_text(size = 12, color = "black", family = "serif"),
                    legend.title = element_text(size = 12, color = "black", family = "serif"),
-                   axis.text = element_text(size = 10, color = "black", family = "serif"),
+                   axis.text = element_text(size = 12, color = "black", family = "serif"),
                    axis.title = element_text(size = 12, color = "black", family = "serif"))
 
 ```
@@ -124,7 +124,7 @@ docu_ma <-
 docu_ma
 
 # save graph
-# ggsave("visuals/docu_ma.png", docu_ma, device = "png", height = 5, width = 7)
+# ggsave("visuals/docu_ma.png", docu_ma, device = "png", dpi = 600, height = 5, width = 7)
 ```
 
 ## Audience by MA
@@ -172,7 +172,7 @@ aud_prop <- aud_count %>%
 # build graph
 aud_viz <- 
   ggplot(data = aud_prop, aes(x = reorder(Category, prop), y = prop)) +
-  geom_col(position = "dodge", fill = "#9dc892") + 
+  geom_col(position = "dodge", fill = "#7FC97F") + 
   geom_text(aes(label = paste0(round(prop * 100, 0), "%")), hjust = -.3, 
                 size = 4, family = "serif") +
   scale_y_continuous(labels = scales::percent_format(),
@@ -188,7 +188,7 @@ aud_viz <-
 aud_viz
 
 # save image
-# ggsave("visuals/aud_viz.png", aud_viz, device = "png", height = 5, width = 7)
+# ggsave("visuals/aud_viz.png", aud_viz, device = "png", dpi = 600, height = 5, width = 7)
 ```
 
 ## Presentation of Evidence by MA
@@ -259,7 +259,7 @@ sum(present_prop$Count)
 # build graph# buCountild graph
 present_viz <- 
   ggplot(data = present_prop, aes(x = reorder(Category, prop), y = prop)) +
-  geom_col(position = "dodge", fill = "#9dc892") + 
+  geom_col(position = "dodge", fill = "#7FC97F") + 
   geom_text(aes(label = paste0(round(prop * 100, 0), "%")), hjust = -.3, 
                 size = 4, family = "serif") +
   scale_y_continuous(labels = scales::percent_format(),
@@ -275,7 +275,7 @@ present_viz <-
 present_viz
 
 # save image
-# ggsave("visuals/present_viz.png", present_viz, device = "png", height = 5, width = 7)
+# ggsave("visuals/present_viz.png", present_viz, device = "png", dpi = 600, height = 5, width = 7)
 ```
 
 ## Statistical info by MA
@@ -294,7 +294,7 @@ table(stat_simple$stat_yes)
 
 stat_simple_viz <- 
   ggplot(stat_simple, aes(x = stat_yes, y = prop)) +
-  geom_col(fill = "#9dc892") + 
+  geom_col(fill = "#7FC97F") + 
   geom_text(aes(label = paste0(round(prop * 100, 0), "%")), vjust = -.4, 
                 size = 4, family = "serif") +
   scale_y_continuous(labels = scales::percent_format(),
@@ -306,7 +306,7 @@ stat_simple_viz <-
 stat_simple_viz
 
 # save image
-# ggsave("visuals/stat_simple.png", stat_simple_viz, device = "png", height = 5, width = 7)
+# ggsave("visuals/stat_simple.png", stat_simple_viz, device = "png", dpi = 600, height = 5, width = 7)
 ```
 
 ## Other Descriptive info by MA
@@ -325,7 +325,7 @@ table(descrip_simple$descrip_yes)
 
 descrip_simple_viz <- 
   ggplot(descrip_simple, aes(x = descrip_yes, y = prop)) +
-  geom_col(fill = "#9dc892") + 
+  geom_col(fill = "#7FC97F") + 
   geom_text(aes(label = paste0(round(prop * 100, 0), "%")), vjust = -.4, 
                 size = 4, family = "serif") +
   scale_y_continuous(labels = scales::percent_format(),
@@ -337,7 +337,7 @@ descrip_simple_viz <-
 descrip_simple_viz
 
 # save image
-# ggsave("visuals/descrip_simple.png", descrip_simple_viz, device = "png", height = 5, width = 7)
+# ggsave("visuals/descrip_simple.png", descrip_simple_viz, device = "png", dpi = 600, height = 5, width = 7)
 
 ```
 
@@ -403,7 +403,7 @@ docu_ma_interest <-
 docu_ma_interest
 
 # save image
-# ggsave("visuals/docu_ma_interest.png", docu_ma_interest, device = "png", height = 5, width = 7)
+# ggsave("visuals/docu_ma_interest.png", docu_ma_interest, device = "png", dpi = 600, height = 5, width = 7)
 ```
 
 ## Meta-analyses with alternative effect size
@@ -427,7 +427,7 @@ docu_ma_alt_es <-
 docu_ma_alt_es
 
 # save image
-# ggsave("visuals/docu_ma_alt_es.png", docu_ma_alt_es, device = "png", height = 5, width = 7)
+# ggsave("visuals/docu_ma_alt_es.png", docu_ma_alt_es, device = "png", dpi = 600, height = 5, width = 7)
 ```
 
 ## Meta-analyses with visuals
@@ -452,7 +452,7 @@ docu_ma_viz <-
 docu_ma_alt_es
 
 # save image
-# ggsave("visuals/docu_ma_viz.png", docu_ma_viz, device = "png", height = 5, width = 7)
+# ggsave("visuals/docu_ma_viz.png", docu_ma_viz, device = "png", dpi = 600, height = 5, width = 7)
 ```
 
 ## Meta-analyses with implications
@@ -477,7 +477,7 @@ docu_ma_imp <-
 docu_ma_imp
 
 # save image
-# ggsave("visuals/docu_ma_imp.png", docu_ma_imp, device = "png", height = 5, width = 7)
+# ggsave("visuals/docu_ma_imp.png", docu_ma_imp, device = "png", dpi = 600, height = 5, width = 8)
 ```
 
 ## Meta-analyses with alternative effect size version 2
@@ -502,7 +502,7 @@ docu_ma_alt_es_V2 <-
 docu_ma_alt_es_V2
 
 # save image
-# ggsave("visuals/docu_ma_alt_es_V2.png", docu_ma_alt_es_V2, device = "png", height = 5, width = 7)
+# ggsave("visuals/docu_ma_alt_es_V2.png", docu_ma_alt_es_V2, device = "png", dpi = 600, height = 5, width = 7)
 ```
 
 ## Description of effect
@@ -529,7 +529,7 @@ descrip <- descrip_docs %>%
 # basic graph
 
 descrip_basic <- ggplot(data = descrip, aes(x = es_descrip, y = prop)) +
-  geom_col(fill = "#9dc892") +
+  geom_col(fill = "#7FC97F") +
   geom_text(aes(label = paste0(round(prop * 100, 0), "%")), vjust = -.3, 
                 size = 4, family = "serif") +
   scale_y_continuous(labels = scales::percent_format(),
@@ -542,7 +542,7 @@ descrip_basic <- ggplot(data = descrip, aes(x = es_descrip, y = prop)) +
 descrip_basic
 
 # save image
-# ggsave("visuals/descrip_basic.png", descrip_basic, device = "png", height = 5, width = 7)
+# ggsave("visuals/descrip_basic.png", descrip_basic, device = "png", dpi = 600, height = 5, width = 7)
 
 ```
 
@@ -595,7 +595,7 @@ alt_viz <-
 alt_viz
 
 # save image
-# ggsave("visuals/alt_es_viz.png", alt_viz, device = "png", height = 5, width = 7)
+# ggsave("visuals/alt_es_viz.png", alt_viz, device = "png", dpi = 600, height = 5, width = 7)
 ```
 
 ## Variation
@@ -610,7 +610,7 @@ var_docs <- data %>%
   ungroup()
 
 var_basic <- ggplot(data = var_docs, aes(x = Category, y = prop)) +
-  geom_col(fill = "#9dc892") +
+  geom_col(fill = "#7FC97F") +
   geom_text(aes(label = paste0(round(prop * 100, 0), "%")), vjust = -.3, 
                 size = 4, family = "serif") +
   scale_y_continuous(labels = scales::percent_format(),
@@ -622,7 +622,7 @@ var_basic <- ggplot(data = var_docs, aes(x = Category, y = prop)) +
 var_basic
 
 # save image
-# ggsave("visuals/var_basic.png", var_basic, device = "png", height = 5, width = 7)
+# ggsave("visuals/var_basic.png", var_basic, device = "png", dpi = 600, height = 5, width = 7)
 ```
 
 ## Does study name citation as MA
@@ -631,13 +631,13 @@ table(data$name_ma)
 
 # overall mention MA
 ma_overall <- ggplot(data, aes(name_ma)) +
-  geom_bar(fill = "#9dc892") +
+  geom_bar(fill = "#7FC97F") +
   viz_theme
 
 ma_overall
 
 # save image
-# ggsave("visuals/ma_overall.png", ma_overall, device = "png", height = 5, width = 7)
+# ggsave("visuals/ma_overall.png", ma_overall, device = "png", dpi = 600, height = 5, width = 7)
 
 # Look at others
 is_ma_other <- data %>%
@@ -651,13 +651,13 @@ table(data$design)
 
 # overall descriptive
 design_overall <- ggplot(data, aes(design)) +
-  geom_bar(fill = "#9dc892") +
+  geom_bar(fill = "#7FC97F") +
   viz_theme
 
 design_overall
 
 # save image
-# ggsave("visuals/design_overall.png", design_overall, device = "png", height = 5, width = 7)
+# ggsave("visuals/design_overall.png", design_overall, device = "png", dpi = 600, height = 5, width = 7)
 ```
 
 ## Moderator of MA
@@ -675,7 +675,7 @@ mod_prop <- data %>%
 # overall moderators
 mod_simple_viz <- 
   ggplot(mod_prop, aes(x = moderator, y = prop)) +
-  geom_col(fill = "#9dc892") + 
+  geom_col(fill = "#7FC97F") + 
   geom_text(aes(label = paste0(round(prop * 100, 0), "%")), vjust = -.4, 
                 size = 4, family = "serif") +
   scale_y_continuous(labels = scales::percent_format(),
@@ -687,7 +687,7 @@ mod_simple_viz <-
 mod_simple_viz
 
 # save image
-# ggsave("visuals/mods_overall.png", mod_simple_viz, device = "png", height = 5, width = 7)
+# ggsave("visuals/mods_overall.png", mod_simple_viz, device = "png", dpi = 600, height = 5, width = 7)
 ```
 ## Codes for studies only
 ```{r study-use-of-ma}
@@ -766,7 +766,7 @@ gen_all_viz <- ggplot(gen_all, aes(x = labels, y = prop, fill = response)) +
                 vjust = -0.5, family = "serif", size = 4) +
   scale_y_continuous(labels = scales::percent_format(),
                      expand = expansion(mult = c(0, 0.1))) +
-  scale_fill_manual(values = c("#9dc892", "#fee8a9", "#beaed4")) +
+  scale_fill_manual(values = c("#7FC97F", "#fee8a9", "#beaed4")) +
   viz_theme +
   theme(axis.title = element_blank(),
         legend.position = "bottom",
@@ -776,5 +776,5 @@ gen_all_viz <- ggplot(gen_all, aes(x = labels, y = prop, fill = response)) +
 gen_all_viz
 
 # save image
-# ggsave("visuals/gen_yes.png", gen_all_viz, device = "png", height = 5, width = 7)
+# ggsave("visuals/gen_yes.png", gen_all_viz, device = "png", dpi = 600, height = 5, width = 7)
 ```
