@@ -51,6 +51,8 @@ table(s1$context)
 s1_include <- s1 %>% 
   filter(cite_conf == "Yes")
 
+table(s1_include$context)
+
 write.csv(s1_include, "data/s1_clean.csv")
 ```
 
@@ -70,9 +72,9 @@ table(s1_include$context)
 
 ma_group_cites <- s1_include %>%
   filter(context != "", !is.na(context)) %>%
-  group_by(ma_ID, context) %>%
+  group_by(label, context) %>%
   summarise(count = n()) %>%
-  pivot_wider(id_cols = ma_ID, names_from = context, values_from = count) %>%
+  pivot_wider(id_cols = label, names_from = context, values_from = count) %>%
   print()
 
 # Save for a table
@@ -100,7 +102,7 @@ ggplot(ma_group, aes(x = factor(ma_ID), y = count, fill = ma_ID)) +
 
 # Documents by Meta-Analysis and Publication Year
 ```{r documents-time-visual}
-time <- s1 %>% 
+time <- s1_include %>% 
     select(ma_ID, label, unique_ID, pub_date) %>% 
     mutate(pub_date = ifelse(is.na(pub_date), "No Date", pub_date)) %>%
     mutate(ma_date = str_extract(label, "\\b\\d{4}\\b")) %>% 
@@ -128,8 +130,32 @@ time_viz <- ggplot(time, aes(x = label, y = count)) +
 time_viz
 
 # save image
-# ggsave("visuals/doc_over_time.png", time_viz, device = "png", height = 5, width = 7)
+# ggsave("visuals/doc_over_time.png", time_viz, device = "png", dpi = 600, height = 5, width = 7)
 ```
+
+# Number of citations by MA year
+```{r}
+ma_time_avg <- time %>% 
+  group_by(ma_date, label) %>% 
+  summarise(total_count = sum(count), .groups = "drop")
+
+sub_2021 <- ma_time_avg %>% 
+  filter(ma_date == "2021")
+
+mean(sub_2021$total_count)
+
+sub_2022 <- ma_time_avg %>% 
+  filter(ma_date == "2022")
+
+mean(sub_2022$total_count)
+
+sub_2023 <- ma_time_avg %>% 
+  filter(ma_date == "2023")
+
+mean(sub_2023$total_count)
+
+```
+
 
 # Self-Citations
 ```{r self-citaiton}
@@ -138,7 +164,7 @@ table(s1_include$self_cite)
 
 # Sorting by language
 ```{r language-list}
-lang <- s1 %>%
+lang <- s1_include %>%
   group_by(cite_lang) %>%
   summarise(count = n()) %>%
   print()
@@ -146,7 +172,7 @@ lang <- s1 %>%
 
 # Sorting by country
 ```{r country-list}
-country <- s1 %>%
+country <- s1_include %>%
   group_by(cite_country) %>%
   summarise(count = n()) %>%
   print()
