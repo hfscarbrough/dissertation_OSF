@@ -89,7 +89,11 @@ number_docs <- data %>%
   select(ma_id, label) %>% 
   mutate(ma_date = str_extract(label, "\\b\\d{4}\\b")) %>%
   group_by(label, ma_id, ma_date) %>%
-  summarise(count = n(), .groups = "drop")
+  summarise(count = n(), .groups = "drop") %>% 
+  add_row(label = "Cromley, 2023", ma_id = "M10001", ma_date = "2023", count = 0) %>% 
+  add_row(label = "Myers, 2023", ma_id = "M10002", ma_date = "2023", count = 0) %>% 
+  add_row(label = "Tischner, 2023", ma_id = "M10011", ma_date = "2023",count = 0) %>% 
+  arrange(label, ma_date)
 
 # average documents per MA 
 mean(number_docs$count)
@@ -98,12 +102,9 @@ mean(number_docs$count)
 number_docs$outcome <- ifelse(number_docs$ma_id %in% ma_read, "Reading",
                      ifelse(number_docs$ma_id %in% ma_math, "Math", NA))
 
-label_order <- number_docs %>%
-  distinct(label, ma_date) %>%
-  arrange(ma_date) %>%
-  pull(label)
-
-number_docs$label <- factor(number_docs$label, levels = label_order)
+number_docs <- number_docs %>%
+  arrange(ma_date, label) %>%
+  mutate(label = factor(label, levels = unique(label)))
 
 # build graph
 docu_ma <- 
@@ -115,7 +116,8 @@ docu_ma <-
             family = "serif", size = 4) +
   viz_theme +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "bottom") +
+        legend.position = "bottom",
+        plot.margin = margin(10, 10, 10, 25)) +
   labs(x = "Meta-Analysis", 
        y = "Number of Citing Documents", 
        title = "")
@@ -124,7 +126,7 @@ docu_ma <-
 docu_ma
 
 # save graph
-# ggsave("visuals/docu_ma.png", docu_ma, device = "png", dpi = 600, height = 5, width = 7)
+# ggsave("visuals/docu_ma.png", docu_ma, device = "png", dpi = 600, height = 5.5, width = 7)
 ```
 
 ## Audience by MA
@@ -358,7 +360,11 @@ number_docs_use <- data %>%
   select(ma_id, label) %>% 
   mutate(ma_date = str_extract(label, "\\b\\d{4}\\b")) %>%
   group_by(label, ma_id, ma_date) %>%
-  summarise(count = n(), .groups = "drop")
+  summarise(count = n(), .groups = "drop") %>% 
+  add_row(label = "Cromley, 2023", ma_id = "M10001", ma_date = "2023", count = 0) %>% 
+  add_row(label = "Myers, 2023", ma_id = "M10002", ma_date = "2023", count = 0) %>% 
+  add_row(label = "Tischner, 2023", ma_id = "M10011", ma_date = "2023",count = 0) %>% 
+  arrange(label, ma_date)
 
 # add labels to color code
 number_docs_use$interest <- ifelse(number_docs_use$ma_id %in% ma_stake, 
@@ -374,12 +380,9 @@ number_docs_use$imp <- ifelse(number_docs_use$ma_id %in% ma_imp,
                               "MA Included Implications Section",
                               "MA Did Not Include Implications Section")
 
-label_order <- number_docs_use %>%
-  distinct(label, ma_date) %>%
-  arrange(ma_date) %>%
-  pull(label)
-
-number_docs_use$label <- factor(number_docs_use$label, levels = label_order)
+number_docs_use <- number_docs_use %>%
+  arrange(ma_date, label) %>%
+  mutate(label = factor(label, levels = unique(label)))
 ```
 
 ## Meta-analyses with interest holder
@@ -394,7 +397,8 @@ docu_ma_interest <-
             family = "serif", size = 4) +
   viz_theme +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "bottom") +
+        legend.position = "bottom",
+        plot.margin = margin(10, 10, 10, 25)) +
   labs(x = "Meta-Analysis", 
        y = "Number of Citing Documents", 
        title = "")
@@ -403,7 +407,7 @@ docu_ma_interest <-
 docu_ma_interest
 
 # save image
-# ggsave("visuals/docu_ma_interest.png", docu_ma_interest, device = "png", dpi = 600, height = 5, width = 7)
+# ggsave("visuals/docu_ma_interest.png", docu_ma_interest, device = "png", dpi = 600, height = 5.5, width = 7)
 ```
 
 ## Meta-analyses with alternative effect size
@@ -418,7 +422,8 @@ docu_ma_alt_es <-
             family = "serif", size = 4) +
   viz_theme +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "bottom") +
+        legend.position = "bottom",
+        plot.margin = margin(10, 10, 10, 25)) +
   labs(x = "Meta-Analysis", 
        y = "Number of Citing Documents", 
        title = "")
@@ -427,7 +432,7 @@ docu_ma_alt_es <-
 docu_ma_alt_es
 
 # save image
-# ggsave("visuals/docu_ma_alt_es.png", docu_ma_alt_es, device = "png", dpi = 600, height = 5, width = 7)
+# ggsave("visuals/docu_ma_alt_es.png", docu_ma_alt_es, device = "png", dpi = 600, height = 5.5, width = 7)
 ```
 
 ## Meta-analyses with visuals
@@ -443,7 +448,8 @@ docu_ma_viz <-
             family = "serif", size = 4) +
   viz_theme +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "bottom") +
+        legend.position = "bottom",
+        plot.margin = margin(10, 10, 10, 25)) +
   labs(x = "Meta-Analysis", 
        y = "Number of Citing Documents", 
        title = "")
@@ -452,7 +458,7 @@ docu_ma_viz <-
 docu_ma_alt_es
 
 # save image
-# ggsave("visuals/docu_ma_viz.png", docu_ma_viz, device = "png", dpi = 600, height = 5, width = 7)
+# ggsave("visuals/docu_ma_viz.png", docu_ma_viz, device = "png", dpi = 600, height = 5.5, width = 7)
 ```
 
 ## Meta-analyses with implications
@@ -468,7 +474,8 @@ docu_ma_imp <-
             family = "serif", size = 4) +
   viz_theme +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "bottom") +
+        legend.position = "bottom",
+        plot.margin = margin(10, 10, 10, 25)) +
   labs(x = "Meta-Analysis", 
        y = "Number of Citing Documents", 
        title = "")
@@ -477,7 +484,7 @@ docu_ma_imp <-
 docu_ma_imp
 
 # save image
-# ggsave("visuals/docu_ma_imp.png", docu_ma_imp, device = "png", dpi = 600, height = 5, width = 8)
+# ggsave("visuals/docu_ma_imp.png", docu_ma_imp, device = "png", dpi = 600, height = 5.5, width = 8)
 ```
 
 ## Meta-analyses with alternative effect size version 2
@@ -493,7 +500,8 @@ docu_ma_alt_es_V2 <-
             family = "serif", size = 4) +
   viz_theme +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        legend.position = "bottom") +
+        legend.position = "bottom",
+        plot.margin = margin(10, 10, 10, 25)) +
   labs(x = "Meta-Analysis", 
        y = "Number of Citing Documents", 
        title = "")
@@ -502,7 +510,7 @@ docu_ma_alt_es_V2 <-
 docu_ma_alt_es_V2
 
 # save image
-# ggsave("visuals/docu_ma_alt_es_V2.png", docu_ma_alt_es_V2, device = "png", dpi = 600, height = 5, width = 7)
+# ggsave("visuals/docu_ma_alt_es_V2.png", docu_ma_alt_es_V2, device = "png", dpi = 600, height = 5.5, width = 7)
 ```
 
 ## Description of effect
