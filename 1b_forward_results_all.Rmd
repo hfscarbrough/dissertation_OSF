@@ -26,6 +26,14 @@ viz_theme <- theme_classic() +
         legend.title = element_text(size = 12, color = "black", family = "serif"),
         axis.text = element_text(color = "black", size = 10, family = "serif"),
         axis.title = element_text(size = 12, color = "black", family = "serif"))
+
+transparent <- theme(
+    panel.background = element_rect(fill='transparent'), #transparent panel bg
+    plot.background = element_rect(fill='transparent', color=NA), #transparent plot bg
+    panel.grid.major = element_blank(), #remove major gridlines
+    panel.grid.minor = element_blank(), #remove minor gridlines
+    legend.background = element_rect(fill='transparent'), #transparent legend bg
+    legend.box.background = element_rect(fill='transparent')) #transparent legend panel
 ```
 
 ## Loading Data
@@ -125,12 +133,13 @@ time_viz <- ggplot(time, aes(x = label, y = count)) +
         legend.position = c(.92, .7)) +
   labs(x = "Meta-Analysis",
        y = "Number of Documents",
-       fill = "Document\nPublication")
+       fill = "Document\nPublication") +
+  transparent
 
 time_viz
 
 # save image
-# ggsave("visuals/doc_over_time.png", time_viz, device = "png", dpi = 600, height = 5, width = 7)
+# ggsave("visuals/doc_over_time.png", time_viz, device = "png", dpi = 600, height = 6, width = 8, bg = "transparent")
 ```
 
 # Number of citations by MA year

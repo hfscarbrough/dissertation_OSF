@@ -23,6 +23,14 @@ viz_theme <- theme_classic() +
                    axis.text = element_text(size = 12, color = "black", family = "serif"),
                    axis.title = element_text(size = 12, color = "black", family = "serif"))
 
+transparent <- theme(
+    panel.background = element_rect(fill = 'transparent'),
+    plot.background = element_rect(fill = 'transparent', color = NA),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.background = element_rect(fill = 'transparent', color = NA),   # add color = NA
+    legend.box.background = element_rect(fill = 'transparent', color = NA))
+
 ```
 
 ## Importing Data
@@ -120,13 +128,14 @@ docu_ma <-
         plot.margin = margin(10, 10, 10, 25)) +
   labs(x = "Meta-Analysis", 
        y = "Number of Citing Documents", 
-       title = "")
+       title = "") +
+  transparent
 
 # view graph
 docu_ma
 
 # save graph
-# ggsave("visuals/docu_ma.png", docu_ma, device = "png", dpi = 600, height = 5.5, width = 7)
+# ggsave("visuals/docu_ma.png", docu_ma, device = "png", dpi = 600, height = 5.5, width = 7, bg = "transparent")
 ```
 
 ## Audience by MA
@@ -303,12 +312,12 @@ stat_simple_viz <-
                      expand = expansion(mult = c(0, 0.1))) +
   labs(x = "Does Document/Citation Report Effect Statistics?",
        y = "Proportion of Citations") +
-  viz_theme
+  viz_theme + transparent
   
 stat_simple_viz
 
 # save image
-# ggsave("visuals/stat_simple.png", stat_simple_viz, device = "png", dpi = 600, height = 5, width = 7)
+# ggsave("visuals/stat_simple.png", stat_simple_viz, device = "png", dpi = 600, height = 5, width = 7, bg = "transparent")
 ```
 
 ## Other Descriptive info by MA
@@ -334,12 +343,12 @@ descrip_simple_viz <-
                      expand = expansion(mult = c(0, 0.1))) +
   labs(x = "Does Document/Citation Report Descriptive Information?",
        y = "Proportion of Citations") +
-  viz_theme
+  viz_theme + transparent
 
 descrip_simple_viz
 
 # save image
-# ggsave("visuals/descrip_simple.png", descrip_simple_viz, device = "png", dpi = 600, height = 5, width = 7)
+# ggsave("visuals/descrip_simple.png", descrip_simple_viz, device = "png", dpi = 600, height = 5, width = 7, bg = "transparent")
 
 ```
 
@@ -401,13 +410,14 @@ docu_ma_interest <-
         plot.margin = margin(10, 10, 10, 25)) +
   labs(x = "Meta-Analysis", 
        y = "Number of Citing Documents", 
-       title = "")
+       title = "") +
+  transparent
 
 # view graph
 docu_ma_interest
 
 # save image
-# ggsave("visuals/docu_ma_interest.png", docu_ma_interest, device = "png", dpi = 600, height = 5.5, width = 7)
+# ggsave("visuals/docu_ma_interest.png", docu_ma_interest, device = "png", dpi = 600, height = 5.5, width = 7, bg = "transparent")
 ```
 
 ## Meta-analyses with alternative effect size
@@ -420,19 +430,19 @@ docu_ma_alt_es <-
   geom_text(aes(label = ifelse(count > 0, count, "")), 
             position = position_dodge(0.9), vjust = -.3, 
             family = "serif", size = 4) +
-  viz_theme +
+  viz_theme + transparent +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = "bottom",
         plot.margin = margin(10, 10, 10, 25)) +
   labs(x = "Meta-Analysis", 
        y = "Number of Citing Documents", 
-       title = "")
+       title = "") 
 
 # view graph
 docu_ma_alt_es
 
 # save image
-# ggsave("visuals/docu_ma_alt_es.png", docu_ma_alt_es, device = "png", dpi = 600, height = 5.5, width = 7)
+# ggsave("visuals/docu_ma_alt_es.png", docu_ma_alt_es, device = "png", dpi = 600, height = 5.5, width = 7, bg = "transparent")
 ```
 
 ## Meta-analyses with visuals
@@ -446,7 +456,7 @@ docu_ma_viz <-
   geom_text(aes(label = ifelse(count > 0, count, "")), 
             position = position_dodge(0.9), vjust = -.3, 
             family = "serif", size = 4) +
-  viz_theme +
+  viz_theme + transparent +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = "bottom",
         plot.margin = margin(10, 10, 10, 25)) +
@@ -455,10 +465,10 @@ docu_ma_viz <-
        title = "")
 
 # view graph
-docu_ma_alt_es
+docu_ma_viz
 
 # save image
-# ggsave("visuals/docu_ma_viz.png", docu_ma_viz, device = "png", dpi = 600, height = 5.5, width = 7)
+# ggsave("visuals/docu_ma_viz.png", docu_ma_viz, device = "png", dpi = 600, height = 5.5, width = 7, bg = "transparent")
 ```
 
 ## Meta-analyses with implications
@@ -472,7 +482,7 @@ docu_ma_imp <-
   geom_text(aes(label = ifelse(count > 0, count, "")), 
             position = position_dodge(0.9), vjust = -.3, 
             family = "serif", size = 4) +
-  viz_theme +
+  viz_theme + transparent +
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         legend.position = "bottom",
         plot.margin = margin(10, 10, 10, 25)) +
@@ -484,7 +494,7 @@ docu_ma_imp <-
 docu_ma_imp
 
 # save image
-# ggsave("visuals/docu_ma_imp.png", docu_ma_imp, device = "png", dpi = 600, height = 5.5, width = 8)
+# ggsave("visuals/docu_ma_imp.png", docu_ma_imp, device = "png", dpi = 600, height = 5.5, width = 8, bg = "transparent")
 ```
 
 ## Meta-analyses with alternative effect size version 2
@@ -625,12 +635,12 @@ var_basic <- ggplot(data = var_docs, aes(x = Category, y = prop)) +
                      expand = expansion(mult = c(0, 0.1))) + 
   labs(x = "Does Document/Citation mention variability in effects?",
        y = "Proportion of Citations") +
-  viz_theme
+  viz_theme + transparent
 
 var_basic
 
 # save image
-# ggsave("visuals/var_basic.png", var_basic, device = "png", dpi = 600, height = 5, width = 7)
+# ggsave("visuals/var_basic.png", var_basic, device = "png", dpi = 600, height = 5, width = 7, bg = "transparent")
 ```
 
 ## Does study name citation as MA
@@ -775,7 +785,7 @@ gen_all_viz <- ggplot(gen_all, aes(x = labels, y = prop, fill = response)) +
   scale_y_continuous(labels = scales::percent_format(),
                      expand = expansion(mult = c(0, 0.1))) +
   scale_fill_manual(values = c("#7FC97F", "#fee8a9", "#beaed4")) +
-  viz_theme +
+  viz_theme + transparent +
   theme(axis.title = element_blank(),
         legend.position = "bottom",
         legend.title = element_blank())
@@ -784,5 +794,5 @@ gen_all_viz <- ggplot(gen_all, aes(x = labels, y = prop, fill = response)) +
 gen_all_viz
 
 # save image
-# ggsave("visuals/gen_yes.png", gen_all_viz, device = "png", dpi = 600, height = 5, width = 7)
+# ggsave("visuals/gen_yes.png", gen_all_viz, device = "png", dpi = 600, height = 5, width = 7, bg = "transparent")
 ```
