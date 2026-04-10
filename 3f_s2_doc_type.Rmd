@@ -1,0 +1,634 @@
+---
+title: "Meta-Analyses that Inlcluded Alternative Effect Sizes"
+author: "Hannah Scarbrough"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading Packages
+```{r load-packages, message=FALSE}
+library(tidyverse)
+library(RColorBrewer)
+```
+
+## Global Themes 
+```{r global_theme, message=FALSE}
+viz_theme <- theme_classic() + 
+             theme(legend.text = element_text(size = 12, color = "black", family = "serif"),
+                   legend.title = element_text(size = 12, color = "black", family = "serif"),
+                   axis.text = element_text(size = 12, color = "black", family = "serif"),
+                   axis.title = element_text(size = 12, color = "black", family = "serif"))
+
+transparent <- theme(
+    panel.background = element_rect(fill = 'transparent'),
+    plot.background = element_rect(fill = 'transparent', color = NA),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.background = element_rect(fill = 'transparent', color = NA),   # add color = NA
+    legend.box.background = element_rect(fill = 'transparent', color = NA))
+
+```
+
+## Importing Data
+```{r data}
+# Documents
+data <- read.csv("data/s2_data_clean.csv")
+
+# Meta-analyses
+included_ma <- read.csv("data/ma_data.csv")
+
+# Codebook 1 
+s1 <- read.csv("data/s1_practice.csv")
+```
+
+## Merge Doc Type from S1
+```{r merge-doc-type}
+# select needed columns from S1
+s1_data <- s1 %>%
+  select(unique_ID, cite_country, self_cite, text_type, text_author, text_source, pub_date) %>%
+  rename("unique_id" = "unique_ID") %>% 
+  distinct() 
+
+# All Document Entries
+data_merge <- data %>%
+  left_join(s1_data, by = "unique_id")
+
+citations <- data_merge
+
+unique_id <- unique(citations$unique_id)
+```
+
+```{r}
+# One Row PER Document
+docs <- data_merge %>% 
+  distinct(unique_id, .keep_all = TRUE)   
+```
+
+## Lists of MAs by feature
+```{r}
+# Math
+ma_math <- included_ma %>%
+  filter(out_mathematics == "Yes") %>%
+  pull(ma_id, label)
+
+# ma_math
+
+# Reading
+ma_read <- included_ma %>%
+  filter(out_reading == "Yes") %>%
+  pull(ma_id, label)
+
+# Meta-Analyses with Visualizations
+ma_viz <- included_ma %>%
+  filter(visualization == "Yes") %>%
+  pull(ma_id, label)
+
+# ma_viz
+
+# Meta-Analyses with Effect Transformations
+ma_es_trans <- included_ma %>%
+  filter(es_metrics == "Yes") %>%
+  pull(ma_id, label)
+
+# ma_es_trans
+
+# Meta-Analyses with Stakeholders
+ma_stake <- included_ma %>%
+  filter(stake_engagement == "Yes") %>%
+  pull(ma_id,label)
+
+# ma_stake
+
+# Meta-Analyses with implications
+ma_imp <- included_ma %>%
+  filter(section == "Yes") %>%
+  pull(ma_id,label)
+
+# ma_imp
+```
+
+## Basic Stats
+```{r pub-year}
+table(docs$pub_date)
+
+doc_year <- docs %>%
+  select(pub_date) %>%
+  group_by(pub_date) %>%
+  count(pub_date, name = "count") %>%
+  print()
+
+doc_year_viz <- ggplot(doc_year, aes(x = pub_date, y = count)) +
+  geom_col(stat = "identity", fill = "#9dc892") +
+  geom_text(aes(label = count), vjust= -.5, 
+            size = 3, colour = "black") +
+  labs(y = "Number of Documents",
+       x = "Document Publication Year") +
+  theme_classic()
+
+doc_year_viz
+
+ggsave("visuals/doc_year_viz.png", doc_year_viz, device = "png", height = 5, width = 7)
+```
+
+```{r country}
+table(docs$cite_country)
+
+country <- docs %>%
+  select(cite_country) %>%
+  group_by(cite_country) %>%
+  count(cite_country, name = "count") %>%
+  print()
+
+write.csv(country, "data/practice_country_table.csv")
+```
+
+```{r}
+self_cite <- docs %>% 
+  filter(self_cite == "Yes")
+
+view(self_cite)
+```
+
+
+## Basic Visual of Type
+```{r basic-type}
+
+# calculate props
+type_prop <- docs %>%
+  mutate(
+    label = case_when(
+      text_type == "Informational - not curriculum specific" ~ "Informational - Not Curriculum Specific",
+      text_type == "Promotional" ~ "Promotional",
+      text_type == "Traditional research publication" ~ "Traditional Research Publication",
+      text_type == "curriculum information" ~ "Curriculum Information",
+      text_type == "other" ~ "Other",
+      text_type == "policy document (from government source)" ~ "Policy Document - Government Source",
+      text_type == "recommendation document" ~ "Recommendation Document",
+      TRUE ~ text_type
+    )) %>%
+  count(label, name = "value") %>%
+  mutate(prop = value / sum(value))
+
+# check that prop = 1
+sum(type_prop$prop)
+
+sum(type_prop$value)
+
+# 
+type <- 
+  ggplot(type_prop, aes(x = label, y = prop)) +
+  geom_col(fill = "lightblue") +
+  scale_y_continuous(labels = scales::percent_format(),
+                     expand = expansion(mult = c(0, 0.1))) +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  geom_text(aes(label = paste0(round(prop * 100, 0), "%")), vjust = -.4, 
+                size = 4, family = "serif") +
+  coord_flip() +
+  theme(legend = element_blank()) +
+  labs(y = "Proportion of All Documents",
+       x = "") +
+  viz_theme
+
+type
+```
+
+## Type by MA Outcome 
+```{r type-by-outcome}
+type_outcome_prop <- docs %>%
+  select(unique_id, ma_id, text_type) %>%
+  mutate(outcome = ifelse(ma_id %in% ma_read, "Reading", "Math")) %>%
+  group_by(outcome, text_type) %>%
+  mutate(value = 1L) %>%
+  filter(text_type != "", !is.na(text_type)) %>%
+  summarise(value = n(), .groups = "drop_last") %>% 
+  mutate(prop = value / sum(value)) %>% 
+  ungroup()
+
+type_outcome <- 
+  ggplot(type_outcome_prop, aes(x = outcome, y = prop, fill = text_type)) +
+  geom_col() +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  theme(legend = element_blank()) +
+  viz_theme
+
+type_outcome
+```
+
+## Type by MA stake 
+```{r type-by-stake}
+type_stake_prop <- docs %>%
+  select(unique_id, ma_id, text_type) %>%
+  mutate(stake = ifelse(ma_id %in% ma_stake, "Yes", "No")) %>%
+  group_by(stake, text_type) %>%
+  mutate(value = 1L) %>%
+  filter(text_type != "", !is.na(text_type)) %>%
+  summarise(value = n(), .groups = "drop_last") %>% 
+  mutate(prop = value / sum(value)) %>% 
+  ungroup()
+
+type_stake <- 
+  ggplot(type_stake_prop, aes(x = stake, y = prop, fill = text_type)) +
+  geom_col() +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  theme(legend = element_blank()) +
+  viz_theme
+
+type_stake
+```
+
+## Type by MA ES 
+```{r type-by-es}
+type_es_prop <- docs %>%
+  select(unique_id, ma_id, text_type) %>%
+  mutate(es_trans = ifelse(ma_id %in% ma_es_trans, "Yes", "No")) %>%
+  group_by(es_trans, text_type) %>%
+  mutate(value = 1L) %>%
+  filter(text_type != "", !is.na(text_type)) %>%
+  summarise(value = n(), .groups = "drop_last") %>% 
+  mutate(prop = value / sum(value)) %>% 
+  ungroup()
+
+type_es <- 
+  ggplot(type_es_prop, aes(x = es_trans, y = prop, fill = text_type)) +
+  geom_col() +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  theme(legend = element_blank()) +
+  viz_theme
+
+type_es
+```
+
+## Type by viz 
+```{r type-by-viz}
+type_viz_prop <- docs %>%
+  select(unique_id, ma_id, text_type) %>%
+  mutate(viz = ifelse(ma_id %in% ma_viz, "Yes", "No")) %>%
+  group_by(viz, text_type) %>%
+  mutate(value = 1L) %>%
+  filter(text_type != "", !is.na(text_type)) %>%
+  summarise(value = n(), .groups = "drop_last") %>% 
+  mutate(prop = value / sum(value)) %>% 
+  ungroup()
+
+type_viz <- 
+  ggplot(type_viz_prop, aes(x = viz, y = prop, fill = text_type)) +
+  geom_col() +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  theme(legend = element_blank()) +
+  viz_theme
+
+type_viz
+```
+
+## Type by Implications 
+```{r type-by-imp}
+type_imp_prop <- docs %>%
+  select(unique_id, ma_id, text_type) %>%
+  mutate(imp = ifelse(ma_id %in% ma_imp, "Yes", "No")) %>%
+  group_by(imp, text_type) %>%
+  mutate(value = 1L) %>%
+  filter(text_type != "", !is.na(text_type)) %>%
+  summarise(value = n(), .groups = "drop_last") %>% 
+  mutate(prop = value / sum(value)) %>% 
+  ungroup()
+
+type_imp <- 
+  ggplot(type_imp_prop, aes(x = imp, y = prop, fill = text_type)) +
+  geom_col() +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  theme(legend = element_blank()) +
+  viz_theme
+
+type_imp
+
+ggsave("visuals/type_imp.png", type_imp, device = "png", height = 5, width = 7)
+```
+
+## Basic Visual of Author
+```{r basic-author}
+auth_prop <- docs %>%
+  select(unique_id, text_author) %>%
+  group_by(text_author) %>%
+  mutate(value = 1L) %>%
+  distinct(unique_id, .keep_all = TRUE) %>%   
+  mutate(label = case_when(
+    text_author == "Currculum website/developer" ~ "Currculum Website/Developer",
+    TRUE ~ text_author)) %>%
+  count(label, name = "value") %>% 
+  ungroup() %>% 
+  mutate(prop = value / sum(value))
+
+# check that prop = 1
+sum(auth_prop$prop)
+
+sum(auth_prop$value)
+
+auth <- 
+  ggplot(auth_prop, aes(x = label, y = prop)) +
+  geom_col(fill = "lightblue") +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  coord_flip() +
+  theme(legend = element_blank()) +
+  viz_theme
+
+auth
+```
+
+## Author by MA Outcome 
+```{r author-by-outcome}
+author_outcome_prop <- docs %>%
+  select(unique_id, ma_id, text_author) %>%
+  mutate(outcome = ifelse(ma_id %in% ma_read, "Reading", "Math")) %>%
+  group_by(outcome, text_author) %>%
+  mutate(value = 1L) %>%
+  filter(text_author != "", !is.na(text_author)) %>%
+  summarise(value = n(), .groups = "drop_last") %>% 
+  mutate(prop = value / sum(value)) %>% 
+  ungroup()
+
+author_outcome <- 
+  ggplot(author_outcome_prop, aes(x = outcome, y = prop, fill = text_author)) +
+  geom_col() +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  theme(legend = element_blank()) +
+  viz_theme
+
+author_outcome
+```
+
+## Author by MA stake 
+```{r author-by-stake}
+author_stake_prop <- docs %>%
+  select(unique_id, ma_id, text_author) %>%
+  mutate(stake = ifelse(ma_id %in% ma_stake, "Yes", "No")) %>%
+  group_by(stake, text_author) %>%
+  mutate(value = 1L) %>%
+  filter(text_author != "", !is.na(text_author)) %>%
+  summarise(value = n(), .groups = "drop_last") %>% 
+  mutate(prop = value / sum(value)) %>% 
+  ungroup()
+
+author_stake <- 
+  ggplot(author_stake_prop, aes(x = stake, y = prop, fill = text_author)) +
+  geom_col() +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  theme(legend = element_blank()) +
+  viz_theme
+
+author_stake
+```
+
+## Author by MA ES 
+```{r author-by-es}
+author_es_prop <- docs %>%
+  select(unique_id, ma_id, text_author) %>%
+  mutate(es_trans = ifelse(ma_id %in% ma_es_trans, "Yes", "No")) %>%
+  group_by(es_trans, text_author) %>%
+  mutate(value = 1L) %>%
+  filter(text_author != "", !is.na(text_author)) %>%
+  summarise(value = n(), .groups = "drop_last") %>% 
+  mutate(prop = value / sum(value)) %>% 
+  ungroup()
+
+author_es <- 
+  ggplot(author_es_prop, aes(x = es_trans, y = prop, fill = text_author)) +
+  geom_col() +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  theme(legend = element_blank()) +
+  viz_theme
+
+author_es
+```
+
+## Author by viz 
+```{r author-by-viz}
+author_viz_prop <- docs %>%
+  select(unique_id, ma_id, text_author) %>%
+  mutate(viz = ifelse(ma_id %in% ma_viz, "Yes", "No")) %>%
+  group_by(viz, text_author) %>%
+  mutate(value = 1L) %>%
+  filter(text_author != "", !is.na(text_author)) %>%
+  summarise(value = n(), .groups = "drop_last") %>% 
+  mutate(prop = value / sum(value)) %>% 
+  ungroup()
+
+author_viz <- 
+  ggplot(author_viz_prop, aes(x = viz, y = prop, fill = text_author)) +
+  geom_col() +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  theme(legend = element_blank()) +
+  viz_theme
+
+author_viz
+```
+
+## Author by Implications 
+```{r auth-by-imp}
+auth_imp_prop <- docs %>%
+  select(unique_id, ma_id, text_author) %>%
+  mutate(imp = ifelse(ma_id %in% ma_imp, "Yes", "No")) %>%
+  group_by(imp, text_author) %>%
+  mutate(value = 1L) %>%
+  filter(text_author != "", !is.na(text_author)) %>%
+  summarise(value = n(), .groups = "drop_last") %>% 
+  mutate(prop = value / sum(value)) %>% 
+  ungroup()
+
+auth_imp <- 
+  ggplot(auth_imp_prop, aes(x = imp, y = prop, fill = text_author)) +
+  geom_col() +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  theme(legend = element_blank()) +
+  viz_theme
+
+auth_imp
+
+ggsave("visuals/auth_imp.png", auth_imp, device = "png", height = 5, width = 7)
+```
+
+## Basic Visual of Source
+```{r basic-source}
+table(docs$text_source)
+
+source_prop <- docs %>%
+  select(unique_id, text_source) %>%
+  group_by(text_source) %>%
+  mutate(value = 1L) %>%
+  distinct(unique_id, .keep_all = TRUE) %>%   
+  mutate(label = case_when(
+    text_source == "Audio/visual media" ~ "Audio/Visual Media",
+    text_source == "Curriculum website" ~ "Curriculum Website",
+    text_source == "Non-profit website/Research Firm/Center" ~ "Non-Profit Website/Research Firm/Center",
+    text_source == "Other government website" ~ "Other Government Website",
+    text_source == "Research publication outlet" ~ "Research Publication Outlet",
+    text_source == "School website" ~ "School Website",
+    text_source == "State education website" ~ "State education website",
+    TRUE ~ text_source)) %>%
+  count(label, name = "value") %>% 
+  ungroup() %>% 
+  mutate(prop = value / sum(value)) 
+
+# check that prop = 1
+sum(source_prop$prop)
+
+sum(source_prop$value)
+
+source <- 
+  ggplot(source_prop, aes(x = label, y = prop)) +
+  geom_col(fill = "lightblue") +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  coord_flip() +
+  theme(legend = element_blank()) +
+  viz_theme
+
+source
+```
+
+## Source by MA Outcome 
+```{r source-by-outcome}
+source_outcome_prop <- docs %>%
+  select(unique_id, ma_id, text_source) %>%
+  mutate(outcome = ifelse(ma_id %in% ma_read, "Reading", "Math")) %>%
+  group_by(outcome, text_source) %>%
+  mutate(value = 1L) %>%
+  filter(text_source != "", !is.na(text_source)) %>%
+  summarise(value = n(), .groups = "drop_last") %>% 
+  mutate(prop = value / sum(value)) %>% 
+  ungroup()
+
+source_outcome <- 
+  ggplot(source_outcome_prop, aes(x = outcome, y = prop, fill = text_source)) +
+  geom_col() +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  theme(legend = element_blank()) +
+  viz_theme
+
+source_outcome
+```
+
+## Source by MA stake 
+```{r source-by-stake}
+source_stake_prop <- docs %>%
+  select(unique_id, ma_id, text_source) %>%
+  mutate(stake = ifelse(ma_id %in% ma_stake, "Yes", "No")) %>%
+  group_by(stake, text_source) %>%
+  mutate(value = 1L) %>%
+  filter(text_source != "", !is.na(text_source)) %>%
+  summarise(value = n(), .groups = "drop_last") %>% 
+  mutate(prop = value / sum(value)) %>% 
+  ungroup()
+
+source_stake <- 
+  ggplot(source_stake_prop, aes(x = stake, y = prop, fill = text_source)) +
+  geom_col() +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  theme(legend = element_blank()) +
+  viz_theme
+
+source_stake
+```
+
+## Source by MA ES 
+```{r source-by-es}
+source_es_prop <- docs %>%
+  select(unique_id, ma_id, text_source) %>%
+  mutate(es_trans = ifelse(ma_id %in% ma_es_trans, "Yes", "No")) %>%
+  group_by(es_trans, text_source) %>%
+  mutate(value = 1L) %>%
+  filter(text_source != "", !is.na(text_source)) %>%
+  summarise(value = n(), .groups = "drop_last") %>% 
+  mutate(prop = value / sum(value)) %>% 
+  ungroup()
+
+source_es <- 
+  ggplot(source_es_prop, aes(x = es_trans, y = prop, fill = text_source)) +
+  geom_col() +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  theme(legend = element_blank()) +
+  viz_theme
+
+source_es
+```
+
+## Source by viz 
+```{r source-by-viz}
+source_viz_prop <- docs %>%
+  select(unique_id, ma_id, text_source) %>%
+  mutate(viz = ifelse(ma_id %in% ma_viz, "Yes", "No")) %>%
+  group_by(viz, text_source) %>%
+  mutate(value = 1L) %>%
+  filter(text_source != "", !is.na(text_source)) %>%
+  summarise(value = n(), .groups = "drop_last") %>% 
+  mutate(prop = value / sum(value)) %>% 
+  ungroup()
+
+source_viz <- 
+  ggplot(source_viz_prop, aes(x = viz, y = prop, fill = text_source)) +
+  geom_col() +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  theme(legend = element_blank()) +
+  viz_theme
+
+source_viz
+```
+
+## source by Implications 
+```{r source-by-imp}
+source_imp_prop <- docs %>%
+  select(unique_id, ma_id, text_source) %>%
+  mutate(imp = ifelse(ma_id %in% ma_imp, "Yes", "No")) %>%
+  group_by(imp, text_source) %>%
+  mutate(value = 1L) %>%
+  filter(text_source != "", !is.na(text_source)) %>%
+  summarise(value = n(), .groups = "drop_last") %>% 
+  mutate(prop = value / sum(value)) %>% 
+  ungroup()
+
+source_imp <- 
+  ggplot(source_imp_prop, aes(x = imp, y = prop, fill = text_source)) +
+  geom_col() +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  theme(legend = element_blank()) +
+  viz_theme
+
+source_imp
+
+ggsave("visuals/source_imp.png", source_imp, device = "png", height = 5, width = 7)
+```
+
+```{r}
+source_imp_alternative <- 
+  ggplot(source_imp_prop, aes(x = imp, y = prop, fill = text_source)) +
+  geom_col(position = "dodge") +
+  scale_y_percent() +
+  scale_x_discrete(labels = label_wrap(20)) + 
+  theme(legend = element_blank()) +
+  viz_theme
+
+source_imp_alternative
+ggsave("visuals/source_imp_alternative.png", source_imp_alternative, device = "png", height = 5, width = 7)
+
+```
+
+
+

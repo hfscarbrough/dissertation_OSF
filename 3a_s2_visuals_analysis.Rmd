@@ -193,13 +193,13 @@ aud_viz <-
   labs(x = NULL,
        y = 'Proportion of Studies', 
        title = "") +
-  theme(legend = element_blank()) + viz_theme
+  theme(legend = element_blank()) + viz_theme + transparent
 
 # view graph
 aud_viz
 
 # save image
-# ggsave("visuals/aud_viz.png", aud_viz, device = "png", dpi = 600, height = 5, width = 7)
+# ggsave("visuals/aud_viz.png", aud_viz, device = "png", dpi = 600, height = 5, width = 7, bg = "transparent")
 ```
 
 ## Presentation of Evidence by MA
@@ -280,13 +280,13 @@ present_viz <-
   labs(x = NULL,
        y = 'Proportion of Studies', 
        title = "") +
-  theme(legend = element_blank()) + viz_theme
+  theme(legend = element_blank()) + viz_theme + transparent
 
 # view graph
 present_viz
 
 # save image
-# ggsave("visuals/present_viz.png", present_viz, device = "png", dpi = 600, height = 5, width = 7)
+# ggsave("visuals/present_viz.png", present_viz, device = "png", dpi = 600, height = 5, width = 7, bg = "transparent")
 ```
 
 ## Statistical info by MA
@@ -384,7 +384,7 @@ number_docs_use$alt_es <- ifelse(number_docs_use$ma_id %in% ma_es_trans,
                                  "MA Did Not Transform Effect Sizes")
 number_docs_use$viz <- ifelse(number_docs_use$ma_id %in% ma_viz, 
                               "MA Included a Vizualization",
-                              "MA Did Not Include a Visulation")
+                              "MA Did Not Include a Vizulation")
 number_docs_use$imp <- ifelse(number_docs_use$ma_id %in% ma_imp, 
                               "MA Included Implications Section",
                               "MA Did Not Include Implications Section")
@@ -494,7 +494,7 @@ docu_ma_imp <-
 docu_ma_imp
 
 # save image
-# ggsave("visuals/docu_ma_imp.png", docu_ma_imp, device = "png", dpi = 600, height = 5.5, width = 8, bg = "transparent")
+# ggsave("visuals/docu_ma_imp.png", docu_ma_imp, device = "png", dpi = 600, height = 5.5, width = 7, bg = "transparent")
 ```
 
 ## Meta-analyses with alternative effect size version 2

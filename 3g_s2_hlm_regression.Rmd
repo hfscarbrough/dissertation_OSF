@@ -1,0 +1,345 @@
+---
+title: "Regressions with Years"
+author: "Hannah Scarbrough"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading Packages
+```{r load-packages, message=FALSE}
+library(tidyverse)
+library(RColorBrewer)
+library(scales)
+```
+
+## Global Themes 
+```{r global-theme, message=FALSE}
+viz_theme <- theme_classic()
+```
+
+## Importing Data
+```{r data}
+# Documents
+data <- read.csv("data/s2_data_clean.csv")
+
+# Meta-analyses
+included_ma <- read.csv("data/ma_data.csv")
+```
+
+## Merge MA URE Features
+```{r merge-doc-type}
+# select needed columns from included ma
+ma_data <- included_ma %>%
+  select(ma_id, pub_year.x, out_mathematics, out_reading, 
+         stake_engagement, es_metrics, visualization, section)
+
+# select needed columns from s2
+s2 <- data %>%
+  select(id:label, stat_info, descrip_info, variability, name_ma) %>% 
+  mutate(ma_year = str_extract(label, "\\d{4}"))
+
+
+data_ma <- merge(s2, ma_data, by = "ma_id")
+```
+
+## Lists of MAs by feature
+```{r ma-features}
+# Math
+ma_math <- included_ma %>%
+  filter(out_mathematics == "Yes") %>%
+  pull(ma_id, label)
+
+# ma_math
+
+# Reading
+ma_read <- included_ma %>%
+  filter(out_reading == "Yes") %>%
+  pull(ma_id, label)
+
+# Meta-Analyses with Visualizations
+ma_viz <- included_ma %>%
+  filter(visualization == "Yes") %>%
+  pull(ma_id, label)
+
+# ma_viz
+
+# Meta-Analyses with Effect Transformations
+ma_es_trans <- included_ma %>%
+  filter(es_metrics == "Yes") %>%
+  pull(ma_id, label)
+
+# ma_es_trans
+
+# Meta-Analyses with Stakeholders
+ma_stake <- included_ma %>%
+  filter(stake_engagement == "Yes") %>%
+  pull(ma_id,label)
+
+# ma_stake
+
+# Meta-Analyses with implications
+ma_imp <- included_ma %>%
+  filter(section == "Yes") %>%
+  pull(ma_id,label)
+
+# ma_imp
+```
+
+# Build Data for Analyses
+
+```{r}
+all_counts <- data_ma %>%
+  select(ma_id, ma_year) %>% 
+  group_by(ma_id) %>%
+  summarise(id_count = n(), ma_year = first(ma_year)) %>% 
+  add_row(ma_id = "M10001", ma_year = "2023", id_count = 0) %>% 
+  add_row(ma_id = "M10002", ma_year = "2023", id_count = 0) %>% 
+  add_row(ma_id = "M10011", ma_year = "2023", id_count = 0) %>% 
+  mutate(read = ifelse(ma_id %in% ma_read, 1, 0)) %>%
+  mutate(stake = ifelse(ma_id %in% ma_stake, 1, 0)) %>%
+  mutate(es = ifelse(ma_id %in% ma_es_trans, 1, 0)) %>%
+  mutate(viz = ifelse(ma_id %in% ma_viz, 1, 0)) %>%
+  mutate(imp = ifelse(ma_id %in% ma_imp, 1, 0)) %>% 
+  mutate(year_cat = as.numeric(ma_year))
+```
+
+
+# Simple Regressions
+
+Not included in manuscript
+
+```{r mean_docs}
+mean(all_counts$id_count)
+```
+
+## Means and SDs
+```{r summary-stats}
+# Overall
+mean(all_counts$id_count)
+sd(all_counts$id_count)
+
+# Reading
+summary_read <- all_counts %>%
+  filter(read == 1) %>%
+  summarise(mean_val = mean(id_count, na.rm = TRUE),
+            sd_val = sd(id_count, na.rm = TRUE))
+summary_read
+
+# Reading
+summary_math <- all_counts %>%
+  filter(read == 0) %>%
+  summarise(mean_val = mean(id_count, na.rm = TRUE),
+            sd_val = sd(id_count, na.rm = TRUE))
+summary_math
+
+# Interest Holders
+summary_int <- all_counts %>%
+  filter(stake == 1) %>%
+  summarise(mean_val = mean(id_count, na.rm = TRUE),
+            sd_val = sd(id_count, na.rm = TRUE))
+summary_int
+
+# Alternative ES
+summary_alt_es <- all_counts %>%
+  filter(es == 1) %>%
+  summarise(mean_val = mean(id_count, na.rm = TRUE),
+            sd_val = sd(id_count, na.rm = TRUE))
+summary_alt_es
+
+# Visual
+summary_viz <- all_counts %>%
+  filter(viz == 1) %>%
+  summarise(mean_val = mean(id_count, na.rm = TRUE),
+            sd_val = sd(id_count, na.rm = TRUE))
+summary_viz
+
+# implications yes
+summary_imp_y <- all_counts %>%
+  filter(imp == 1) %>%
+  summarise(mean_val = mean(id_count, na.rm = TRUE),
+            sd_val = sd(id_count, na.rm = TRUE))
+summary_imp_y
+
+# implications no
+summary_imp_n <- all_counts %>%
+  filter(imp == 0) %>%
+  summarise(mean_val = mean(id_count, na.rm = TRUE),
+            sd_val = sd(id_count, na.rm = TRUE))
+summary_imp_n
+```
+
+## stake 
+```{r stake_reg}
+stake_reg <- glm(id_count ~ stake, data = all_counts)
+
+summary(stake_reg)
+confint(stake_reg)
+
+```
+
+## Effect Sizes 
+```{r es_reg}
+es_reg <- glm(id_count ~ es, data = all_counts)
+
+summary(es_reg)
+confint(es_reg)
+
+# including es alternative = more citations on average
+
+```
+
+## Visualization
+```{r viz_reg}
+viz_reg <- glm(id_count ~ viz, data = all_counts)
+
+summary(viz_reg)
+confint(viz_reg)
+
+# including visual = less citations on average
+
+```
+
+## Implications
+```{r imp_reg}
+imp_reg <- glm(id_count ~ imp, data = all_counts)
+
+summary(imp_reg)
+confint(imp_reg)
+
+# including implications = more citations on average
+
+```
+
+## Regression
+
+```{r out_reg}
+out_reg <- glm(id_count ~ read, data = all_counts)
+
+summary(out_reg)
+confint(out_reg)
+
+# including implications = more citations on average
+
+math <- 6.333 + 8.121
+math
+```
+
+## Full Model
+
+```{r full-reg-model}
+all_reg <- glm(id_count ~ read + stake + es + viz + imp, data = all_counts)
+
+summary(all_reg)
+confint(all_reg)
+```
+
+## Checking interaction between topic and interest-holder
+
+```{r interaction-all-predictors}
+int_counts <- all_counts %>%
+  mutate(read_stake = read * stake)
+
+int_reg <- glm(id_count ~ read + stake + es + viz + imp + read_stake, data = int_counts)
+
+summary(int_reg)
+confint(int_reg)
+```
+
+## Only topic, interest holder, and interaction
+
+```{r interaction-limited-predictors}
+read_stake_reg <- glm(id_count ~ read + stake + read_stake, data = int_counts)
+
+summary(read_stake_reg)
+confint(read_stake_reg)
+```
+
+
+## All with year added
+
+```{r mean-docs-year}
+mean(int_counts$id_count)
+```
+
+## stake 
+```{r stake-reg-year}
+stake_year_reg <- glm(id_count ~ ma_year + stake, data = all_counts)
+
+summary(stake_year_reg)
+confint(stake_year_reg)
+```
+
+## Effect Sizes 
+```{r es-reg-year}
+es_year_reg <- glm(id_count ~ ma_year + es, data = all_counts)
+
+summary(es_year_reg)
+confint(es_year_reg)
+```
+
+## Visualization
+```{r viz-reg-year}
+viz_year_reg <- glm(id_count ~ ma_year + viz, data = all_counts)
+
+summary(viz_year_reg)
+confint(viz_year_reg)
+```
+
+## Implications
+```{r imp-reg-year}
+imp_year_reg <- glm(id_count ~ ma_year + imp, data = all_counts)
+
+summary(imp_year_reg)
+confint(imp_year_reg)
+```
+
+## Regression
+
+```{r out-reg-year}
+out_year_reg <- glm(id_count ~ ma_year + read, data = all_counts)
+
+summary(out_year_reg)
+confint(out_year_reg)
+```
+
+## Full Model
+
+```{r full-reg-model-year}
+all_counts$year_2021 <- as.numeric(all_counts$ma_year) - 2021
+
+all_year_reg <- glm(id_count ~ year_2021 + read + stake + es + viz + imp, data = all_counts)
+
+summary(all_year_reg)
+confint(all_year_reg)
+```
+
+## Checking interaction between topic and interest-holder
+
+```{r interaction-all-predictors-year}
+int_counts$year_2021 <- as.numeric(int_counts$ma_year) - 2021
+
+int_year_reg <- glm(id_count ~ year_2021 + read + stake + es + viz + imp + read_stake, data = int_counts)
+
+summary(int_year_reg)
+confint(int_year_reg)
+```
+
+## Only topic, interest holder, and interaction
+
+```{r interaction-limited-predictors-year}
+read_stake_reg <- glm(id_count ~ year_2021 + read + stake + read_stake, data = int_counts)
+
+summary(read_stake_reg)
+confint(read_stake_reg)
+```
+
+
+```{r interaction-limited-predictors-year-cat}
+read_stake_reg <- glm(id_count ~ scale(year_cat) + read + stake + read_stake, data = int_counts)
+
+summary(read_stake_reg)
+confint(read_stake_reg)
+```
