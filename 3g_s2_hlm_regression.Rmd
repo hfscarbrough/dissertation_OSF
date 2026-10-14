@@ -39,9 +39,10 @@ ma_data <- included_ma %>%
 # select needed columns from s2
 s2 <- data %>%
   select(id:label, stat_info, descrip_info, variability, name_ma) %>% 
+# create column for publication year
   mutate(ma_year = str_extract(label, "\\d{4}"))
 
-
+# merge data sets
 data_ma <- merge(s2, ma_data, by = "ma_id")
 ```
 
@@ -94,7 +95,9 @@ ma_imp <- included_ma %>%
 all_counts <- data_ma %>%
   select(ma_id, ma_year) %>% 
   group_by(ma_id) %>%
+# create citation count variable 
   summarise(id_count = n(), ma_year = first(ma_year)) %>% 
+# add rows for three MAs with no practice ciations
   add_row(ma_id = "M10001", ma_year = "2023", id_count = 0) %>% 
   add_row(ma_id = "M10002", ma_year = "2023", id_count = 0) %>% 
   add_row(ma_id = "M10011", ma_year = "2023", id_count = 0) %>% 
@@ -128,7 +131,7 @@ summary_read <- all_counts %>%
             sd_val = sd(id_count, na.rm = TRUE))
 summary_read
 
-# Reading
+# Math
 summary_math <- all_counts %>%
   filter(read == 0) %>%
   summarise(mean_val = mean(id_count, na.rm = TRUE),
@@ -136,25 +139,46 @@ summary_math <- all_counts %>%
 summary_math
 
 # Interest Holders
-summary_int <- all_counts %>%
+summary_int_y <- all_counts %>%
   filter(stake == 1) %>%
   summarise(mean_val = mean(id_count, na.rm = TRUE),
             sd_val = sd(id_count, na.rm = TRUE))
-summary_int
+summary_int_y
 
-# Alternative ES
-summary_alt_es <- all_counts %>%
+# Interest Holders
+summary_int_n <- all_counts %>%
+  filter(stake == 0) %>%
+  summarise(mean_val = mean(id_count, na.rm = TRUE),
+            sd_val = sd(id_count, na.rm = TRUE))
+summary_int_n
+
+# Alternative ES yes
+summary_alt_es_y <- all_counts %>%
   filter(es == 1) %>%
   summarise(mean_val = mean(id_count, na.rm = TRUE),
             sd_val = sd(id_count, na.rm = TRUE))
-summary_alt_es
+summary_alt_es_y
 
-# Visual
-summary_viz <- all_counts %>%
+# Alternative ES no
+summary_alt_es_n <- all_counts %>%
+  filter(es == 0) %>%
+  summarise(mean_val = mean(id_count, na.rm = TRUE),
+            sd_val = sd(id_count, na.rm = TRUE))
+summary_alt_es_n
+
+# Visual yes
+summary_viz_y <- all_counts %>%
   filter(viz == 1) %>%
   summarise(mean_val = mean(id_count, na.rm = TRUE),
             sd_val = sd(id_count, na.rm = TRUE))
-summary_viz
+summary_viz_y
+
+# Visual no
+summary_viz_n <- all_counts %>%
+  filter(viz == 0) %>%
+  summarise(mean_val = mean(id_count, na.rm = TRUE),
+            sd_val = sd(id_count, na.rm = TRUE))
+summary_viz_n
 
 # implications yes
 summary_imp_y <- all_counts %>%
